@@ -26,7 +26,6 @@ class StructureAnalyzer:
                     role = 'S' if token.dep_ == 'nsubj' else 'O' if token.dep_ == 'dobj' else 'X'
                     entity_grid[token.text].append((sent_idx, role))
         
-        # Compute transition probabilities
         transitions = []
         for entity, mentions in entity_grid.items():
             for i in range(1, len(mentions)):
@@ -34,7 +33,6 @@ class StructureAnalyzer:
                 curr_role = mentions[i][1]
                 transitions.append(f"{prev_role}→{curr_role}")
         
-        # Calculate coherence score (0-1 scale)
         valid_transitions = [t for t in transitions if t in ['S→S', 'S→O', 'O→S']]
         return len(valid_transitions) / len(transitions) if transitions else 0
 
