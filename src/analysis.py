@@ -7,7 +7,7 @@ import torch.nn as nn
 from transformers import pipeline, Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtractor
 
 
-from factors.pass import pass
+from factors.body_language import BodyLanguageAnalyzer
 class JointMap:
     """
     Here we want to determine the appropriate body language for every situation.

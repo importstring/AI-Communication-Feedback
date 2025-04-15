@@ -1,89 +1,105 @@
-import torch
+import cv2
+import mediapipe as mp
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
+import pandas as pd
 import numpy as np
-from typing import Dict, List, Union, Optional
+import datetime
+from ..parquet_management import ReadWrite
 
-class JointMap:
+class JointMap():
     """
     Analyzes body language using pose estimation and movement patterns.
     """
     def __init__(self):
-        # Initialize pose estimation model
-        self.pose_model = torch.hub.load('pytorch/vision', 'resnet50', pretrained=True)
-        self.pose_model.eval()
-        self.body_language_mappings = {
-            'confident': ['shoulders_back', 'head_up', 'open_stance'],
-            'nervous': ['fidgeting', 'closed_posture', 'limited_eye_contact'],
-            'engaged': ['forward_lean', 'mirroring', 'frequent_nodding']
-        }
-    
-    def measure_body_language(self, body_language_video: Union[torch.Tensor, np.ndarray]) -> Dict:
+        self.states = {} # Frame: {Joint: (x, y, z)}
+        self.BaseOptions = mp.tasks.BaseOptions
+        self.PoseLandmarker = mp.tasks.vision.PoseLandmarker
+        self.PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
+        self.VisionRunningMode = mp.tasks.vision.RunningMode
+        
+        # Initialize the PoseLandmarker options
+        self.options = self.PoseLandmarkerOptions(
+            base_options=self.BaseOptions(model_asset_path='pose_landmarker.task'),
+            running_mode=self.VisionRunningMode.Video
+        )
+        
+        self.pose_landmarker = self.PoseLandmarker.create_from_options(self.options)
+        
+
+    def map_recording(self, video_path):
         """
-        Measures the body language of the speaker using pose estimation.
-        
-        Args:
-            body_language_video: Tensor or numpy array containing video frames of body language
-            
-        Returns:
-            dict: Dictionary containing body language metrics and classification
+        Maps the joints in a video file and stores the results in parquet format
         """
-        if not isinstance(body_language_video, torch.Tensor):
-            body_language_video = torch.tensor(body_language_video)
+        
+        cap = cv2.VideoCapture(video_path)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = 0
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
             
-        # Extract frames from video
-        frames = self._extract_frames(body_language_video)
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            self._process_frame(rgb_frame, frame_count, fps)
+            frame_count += 1
+
+        cap.release()
+    
+        df = self._convert_to_dataframe()
+        video_path = datetime.now().strftime("%Y-%m-%d")
+        ReadWrite().write_parquet(
+            data=df, file=f"{video_path}.parquet"
+            )
+        return df
+
+    def _convert_to_dataframe(self):
+        columns = pd.MultiIndex.from_product(
+            [range(33), ['x', 'y', 'z']],
+            names=['joint', 'coord']
+        )
         
-        # Detect keypoints in each frame
-        keypoints = []
-        with torch.no_grad():
-            for frame in frames:
-                frame_keypoints = self._detect_keypoints(frame)
-                keypoints.append(frame_keypoints)
+        data = np.zeros((len(self.states), 33*3))
+        for frame, landmarks in self.states.items():
+            data[frame] = np.array([
+                coord for j in sorted(landmarks) 
+                for coord in landmarks[j]
+            ])
         
-        # Analyze keypoint movements and patterns
-        posture_metrics = self._analyze_posture(keypoints)
-        gesture_metrics = self._analyze_gestures(keypoints)
-        
-        # Classify overall body language
-        classification = self._classify_body_language(posture_metrics, gesture_metrics)
-        
-        return {
-            'posture': posture_metrics,
-            'gestures': gesture_metrics,
-            'classification': classification
+        return pd.DataFrame(data, columns=columns)
+
+    def __del__(self):
+        """
+        Properly clean up MediaPipe resources
+        """
+        if hasattr(self, 'pose_landmarker'):
+            self.pose_landmarker.close()
+
+
+    def _process_frame(self, frame, frame_number, fps):
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
+
+        height, width, _ = frame.shape
+
+        self.states[frame_number] = {
+            i: (lmk.x * width, lmk.y * height, lmk.z * width) 
+            for i, lmk in enumerate(result.pose_landmarks[0])
         }
-    
-    def _extract_frames(self, video: torch.Tensor) -> List[torch.Tensor]:
-        """Extract frames from video tensor"""
-        # Implementation depends on video format
-        return [video[i] for i in range(0, video.shape[0], 5)]  # Sample every 5th frame
-    
-    def _detect_keypoints(self, frame: torch.Tensor) -> torch.Tensor:
-        """Detect body keypoints in a single frame"""
-        predictions = self.pose_model(frame.unsqueeze(0))
-        return predictions
-    
-    def _analyze_posture(self, keypoints: List[torch.Tensor]) -> Dict[str, float]:
-        """Analyze posture from sequence of keypoints"""
-        # Implement posture analysis logic
-        return {'alignment': 0.8, 'openness': 0.7, 'stability': 0.9}
-    
-    def _analyze_gestures(self, keypoints: List[torch.Tensor]) -> Dict[str, float]:
-        """Analyze gestures from sequence of keypoints"""
-        # Implement gesture analysis logic
-        return {'frequency': 0.6, 'amplitude': 0.5, 'fluidity': 0.8}
-    
-    def _classify_body_language(self, posture: Dict[str, float], 
-                              gestures: Dict[str, float]) -> str:
-        """Classify overall body language based on metrics"""
-        # Implement classification logic
-        confidence_score = posture['openness'] * 0.5 + gestures['amplitude'] * 0.3 + posture['stability'] * 0.2
-        engagement_score = gestures['frequency'] * 0.4 + posture['openness'] * 0.3 + gestures['fluidity'] * 0.3
-        
-        if confidence_score > 0.7 and engagement_score > 0.6:
-            return 'confident_and_engaged'
-        elif confidence_score > 0.7:
-            return 'confident'
-        elif engagement_score > 0.7:
-            return 'engaged'
-        else:
-            return 'neutral' 
+
+        timestamp_ms = int((frame_number / fps) * 1000)
+
+        result = self.pose_landmarker.detect_for_video(mp_image, timestamp_ms)
+
+        self.states[frame_number] = {
+            i: (lmk.x, lmk.y, lmk.z) 
+            for i, lmk in enumerate(result.pose_landmarks[0])
+        }
+
+    def load_video(self, video_path):
+        """
+        Loads a video file and initializes the pose landmarker.
+        """
+        self.video_path = video_path
+        self.video = cv2.VideoCapture(video_path)
+        self.pose_landmarker = self.PoseLandmarker.create_from_options(self.options)

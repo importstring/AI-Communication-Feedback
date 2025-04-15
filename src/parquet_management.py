@@ -10,12 +10,14 @@ class ReadWrite:
     def __init__(self):
         self.base_path = '../data'
         
-    def read_file(self, file, sub_dir=""):
+    def read_parquet(self, file, sub_dir=""):
         table = pq.read_table(self.base_path + sub_dir + file)
         df = table.to_pandas()
         return df
 
-    def write_file(self, file, data, sub_dir=""):
+    def write_parquet(self, data="", file=""):
         df = pd.DataFrame(data)
         table = pa.Table.from_pandas(df)
-        pq.write_table(table, 'dataframe.parquet', compression='snappy')
+        pq.write_table(
+            table, 'filepath', compression='snappy'
+        )

@@ -95,7 +95,6 @@ def record(sub_dir="", filename=""):
     print('Success')
     print(f"Recording finished. Video saved as {video_class.video_filename} and audio saved as {video_class.audio_filename}.")
 
-# Testing the code for syntax and runtime errors
 if __name__ == "__main__":
     try:
         record()
