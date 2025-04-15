@@ -61,6 +61,12 @@ class RecordVideo:
             wf.writeframes(b''.join(frames))
 
 def record(sub_dir="", filename=""):
+    """
+    Records video and audio and saves as mp4 until 'q' is pressed.
+    Args:
+        sub_dir (str): Subdirectory to save the recording.
+        filename (str): Filename for the recording.
+    """
     video_class = RecordVideo()
     video_class.save_path = video_class.update_path(sub_dir, filename)
     
@@ -90,7 +96,8 @@ def record(sub_dir="", filename=""):
     print(f"Recording finished. Video saved as {video_class.video_filename} and audio saved as {video_class.audio_filename}.")
 
 # Testing the code for syntax and runtime errors
-try:
-    record()
-except Exception as e:
-    print(f"Error: {e}")
+if __name__ == "__main__":
+    try:
+        record()
+    except Exception as e:
+        print(f"Error: {e}")
