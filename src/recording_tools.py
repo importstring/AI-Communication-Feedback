@@ -18,7 +18,7 @@ class RecordVideo:
         if not self.cap.isOpened():
             raise Exception("Unable to access the camera.")
         
-        self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Fixed codec to 'mp4v'
+        self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')  
         self.video_writer = cv2.VideoWriter(self.video_filename, self.fourcc, self.frame_rate, (640, 480)) 
 
         self.base_dir = '../'

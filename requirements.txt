@@ -19,3 +19,6 @@ transformers==4.38.2
 nltk==3.8.1
 pyAudioAnalysis==0.3.14
 opensmile==2.4.2
+torch==2.2.1
+torchvision==0.17.1
+crepe==0.0.13
