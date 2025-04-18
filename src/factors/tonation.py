@@ -1,129 +1,107 @@
 import librosa
 import numpy as np
-from pydub import AudioSegment
-import pyloudnorm as pyln
-import crepe
-from typing import Dict, Union, Optional
+import pandas as pd
+from disvoice.prosody import Prosody
+from ..parquet_management import ReadWrite  # Reuse existing Parquet handler
 
-class AudioAnalyzer:
-    def __init__(self, file_path: Optional[str] = None, audio_data: Optional[np.ndarray] = None):
-        if file_path:
-            self.waveform = librosa.load(file_path, sr=None)[0]
-        elif audio_data is not None:
-            self.waveform = audio_data
-        else:
-            raise ValueError("Either file_path or audio_data must be provided")
-            
-        # EBU R128 loudness normalization
-        self.waveform = pyln.normalize.peak(self.waveform, -3.0)
-        self.sr = 16000  # set sample rate
-
-    def get_tonation_variance(self) -> float:
-        """Improved pitch tracking using CREPE neural model"""
-        _, f0 = crepe.predict(self.waveform, self.sr, viterbi=True)
-        return f0[f0 > 0].std()
-
-    def get_volume_dynamics(self) -> float:
-        """Calculates dynamic range compression ratio"""
-        rms = librosa.feature.rms(y=self.waveform)
-        peak = np.max(rms)
-        trough = np.min(rms)
-        return 20 * np.log10(peak/trough) if trough != 0 else 0
-
-class Tonation:
+class TonalAnalyzer:
+    """Analyzes speech prosody features for machine learning applications.
+    
+    Captures pitch, intensity, and spectral characteristics at 10ms intervals
+    for temporal alignment with video analysis pipelines.
     """
-    Analyzes tonation variance and patterns in speech.
-    """
-    def __init__(self):
-        self.analyzer = None
-        self.pitch_tracker = crepe
-        
-    def analyze_tonation(self, audio_file: Union[str, np.ndarray]) -> Dict:
-        """
-        Analyzes tonation variance in audio.
+    
+    def __init__(self, sr=16000, frame_length=2048, hop_length=512):
+        """Initialize audio processing parameters.
         
         Args:
-            audio_file: Path to audio file or numpy array of audio data
+            sr: Sampling rate matching video analysis temporal resolution
+            frame_length: Power-of-two for optimal FFT performance
+            hop_length: 10ms frames for alignment with 30fps video (512/16000 = 0.032s)
+        """
+        self.sr = sr
+        self.frame_length = frame_length
+        self.hop_length = hop_length
+        self.prosody = Prosody()
+        self.rw = ReadWrite()  # Reuse Parquet handler from existing pipeline
+
+    def extract_features(self, audio_path: str) -> pd.DataFrame:
+        """Extract prosodic features aligned with video analysis timeline.
+        
+        Process flow:
+        1. Load audio with temporal resolution matching video frames
+        2. Extract pitch contours using YIN algorithm (optimal for speech)
+        3. Calculate intensity RMS values
+        4. Combine features with timestamps for Parquet storage
+        
+        Returns:
+            DataFrame with columns [timestamp, f0, intensity, ...prosody_features]
+        """
+        try:
+            # Load audio with librosa using parameters from video pipeline
+            y, sr = librosa.load(audio_path, sr=self.sr)
+            
+            # Extract pitch using YIN algorithm (robust to speech aperiodicity)
+            f0 = librosa.yin(y, fmin=50, fmax=2000,
+                           frame_length=self.frame_length,
+                           hop_length=self.hop_length)
+            
+            # Calculate intensity (RMS) with same windowing as pitch
+            intensity = librosa.feature.rms(y=y, 
+                                          frame_length=self.frame_length,
+                                          hop_length=self.hop_length)
+
+            # Get prosody features optimized for ML input
+            static_features = self.prosody.prosody_static(audio_path)
+            dynamic_features = self.prosody.prosody_dynamic(audio_path)
+
+            return self._create_feature_dataframe(f0, intensity[0], static_features, dynamic_features, sr)
+            
+        except Exception as e:
+            print(f"Feature extraction failed: {str(e)}")
+            raise
+
+    def _create_feature_dataframe(self, f0, intensity, static, dynamic, sr) -> pd.DataFrame:
+        """Structure features for temporal alignment with video data."""
+        feature_df = pd.DataFrame({
+            'timestamp': librosa.frames_to_time(
+                np.arange(len(f0)), 
+                sr=sr, 
+                hop_length=self.hop_length
+            ),
+            'f0': f0,
+            'intensity': intensity,
+            **static,
+            'dynamic_features': dynamic.tolist()
+        })
+        
+        # Use existing Parquet handler from video pipeline
+        self.rw.write_parquet(
+            data=feature_df, 
+            file=f"tonal_features_{datetime.now().strftime('%Y-%m-%d')}.parquet"
+        )
+        return feature_df
+
+    def real_time_analysis(self, audio_buffer: np.ndarray) -> dict:
+        """Streaming analysis compatible with video processing frame rates.
+        
+        Args:
+            audio_buffer: 10ms audio chunk (512 samples at 16kHz)
             
         Returns:
-            dict: Dictionary containing tonation metrics
+            Dict with 'pitch_variability' and 'mean_intensity' for ML input
         """
-        # Initialize AudioAnalyzer
-        self.analyzer = AudioAnalyzer(audio_file if isinstance(audio_file, str) else None,
-                                    audio_file if isinstance(audio_file, np.ndarray) else None)
-        
-        # Get basic analysis
-        basic_analysis = {
-            'tonation_variance': self.analyzer.get_tonation_variance(),
-            'volume_dynamics': self.analyzer.get_volume_dynamics()
-        }
-        
-        # Extract pitch using CREPE
-        time, frequency, confidence, _ = self.pitch_tracker.predict(
-            self.analyzer.waveform, 
-            self.analyzer.sr, 
-            viterbi=True
-        )
-        
-        # Calculate pitch statistics
-        valid_pitch = frequency[confidence > 0.5]  # Only use high-confidence pitch estimates
-        if len(valid_pitch) > 0:
-            pitch_mean = np.mean(valid_pitch)
-            pitch_std = np.std(valid_pitch)
-            pitch_range = np.max(valid_pitch) - np.min(valid_pitch)
-        else:
-            pitch_mean = pitch_std = pitch_range = 0
-        
-        # Calculate pitch variation metrics
-        pitch_variability = self._calculate_pitch_variability(frequency, confidence)
-        pitch_modulation = self._calculate_pitch_modulation(frequency, confidence, time)
+        f0 = librosa.yin(audio_buffer, fmin=50, fmax=2000,
+                        frame_length=self.frame_length,
+                        hop_length=self.hop_length)
         
         return {
-            'basic_analysis': basic_analysis,
-            'pitch_mean': float(pitch_mean),
-            'pitch_std': float(pitch_std),
-            'pitch_range': float(pitch_range),
-            'pitch_variability': pitch_variability,
-            'pitch_modulation': pitch_modulation,
-            'tonation_score': self._calculate_tonation_score(pitch_std, pitch_modulation)
+            # Standard deviation captures pitch modulation (emotional content)
+            'pitch_variability': np.std(f0),
+            
+            # RMS intensity indicates vocal effort (stress detection)
+            'mean_intensity': np.mean(librosa.feature.rms(
+                y=audio_buffer,
+                frame_length=self.frame_length
+            ))
         }
-    
-    def _calculate_pitch_variability(self, frequency: np.ndarray, 
-                                   confidence: np.ndarray) -> float:
-        """Calculate pitch variability metrics"""
-        valid_freq = frequency[confidence > 0.5]
-        if len(valid_freq) < 2:
-            return 0.0
-            
-        # Calculate local variability
-        local_variability = np.abs(np.diff(valid_freq))
-        return float(np.mean(local_variability))
-    
-    def _calculate_pitch_modulation(self, frequency: np.ndarray, 
-                                  confidence: np.ndarray, 
-                                  time: np.ndarray) -> float:
-        """Calculate pitch modulation metrics"""
-        valid_indices = confidence > 0.5
-        valid_freq = frequency[valid_indices]
-        valid_time = time[valid_indices]
-        
-        if len(valid_freq) < 2:
-            return 0.0
-            
-        # Calculate modulation depth
-        modulation_depth = np.max(valid_freq) - np.min(valid_freq)
-        # Calculate modulation rate
-        zero_crossings = np.where(np.diff(np.signbit(valid_freq - np.mean(valid_freq))))[0]
-        modulation_rate = len(zero_crossings) / (valid_time[-1] - valid_time[0])
-        
-        return float(modulation_depth * modulation_rate)
-    
-    def _calculate_tonation_score(self, pitch_std: float, 
-                                pitch_modulation: float) -> float:
-        """Calculate overall tonation score"""
-        # Normalize scores to 0-1 range
-        normalized_std = min(1.0, pitch_std / 100)  # Assuming max pitch std of 100 Hz
-        normalized_mod = min(1.0, pitch_modulation / 50)  # Assuming max modulation of 50
-        
-        # Weighted combination
-        return 0.6 * normalized_std + 0.4 * normalized_mod

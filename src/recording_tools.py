@@ -1,18 +1,23 @@
+import os
 import cv2
 import pyaudio
 import wave
+from datetime import datetime
 import threading
 
 class RecordVideo:
     def __init__(self):
-        self.video_filename = 'output.mp4'
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+        self.video_filename = f'output_{timestamp}.mp4'
+        self.audio_filename = f'output_{timestamp}.wav'
         self.frame_rate = 60
 
-        self.audio_filename = 'output.wav'  
         self.chunk = 1024
         self.sample_format = pyaudio.paInt16
         self.channels = 1
         self.sampling_rate = 44100
+
 
         self.cap = cv2.VideoCapture(0)
         if not self.cap.isOpened():
@@ -25,8 +30,8 @@ class RecordVideo:
 
         self.recording = False
         
-        self.video_filename = self.update_path(self.base_dir + '/recordings', self.video_filename)
-        self.audio_filename = self.update_path(self.base_dir + '/recordings', self.audio_filename)
+        self.video_filename = self.update_path(self.base_dir + '/recordings/video/', self.video_filename)
+        self.audio_filename = self.update_path(self.base_dir + '/recordings/audio/', self.audio_filename)
 
     def update_path(self, sub_dir='', filename=''):
         output = self.base_dir
