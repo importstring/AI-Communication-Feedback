@@ -26,12 +26,12 @@ class RecordVideo:
         self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')  
         self.video_writer = cv2.VideoWriter(self.video_filename, self.fourcc, self.frame_rate, (640, 480)) 
 
-        self.base_dir = '../'
+        self.base_dir = '../data/recordings'
 
         self.recording = False
         
-        self.video_filename = self.update_path(self.base_dir + '/recordings/video/', self.video_filename)
-        self.audio_filename = self.update_path(self.base_dir + '/recordings/audio/', self.audio_filename)
+        self.video_filename = self.update_path(self.base_dir + '/video/', self.video_filename)
+        self.audio_filename = self.update_path(self.base_dir + '/audio/', self.audio_filename)
 
     def update_path(self, sub_dir='', filename=''):
         output = self.base_dir
