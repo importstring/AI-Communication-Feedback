@@ -33,6 +33,20 @@ class VolumeVarience:
 
             return rms_values
 
+    def calculate_variance(self, rms_values: list) -> float:
+        """
+        Calculate the variance of the RMS values.
+        """
+        path = self.get_path()
+        data = self.calculate_rms(path)
+        self.save_data(data, path)
+
+    def save_data(self, data, path):
+        """
+        Takes the input data and the path of the input file 
+        Saves the data to a file in the ../data/measurements/{date recorded}/analysis.parquet
+        """
+        pass # TODO: DO IT QUICKLY
     def get_path(self):
         """
         Get the path to the most recent audio file.
