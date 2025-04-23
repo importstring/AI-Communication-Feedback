@@ -3,6 +3,9 @@ from typing import Dict, List, Optional, Tuple
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 import nltk
+import glob
+import os
+from datetime import datetime
 import numpy as np
 
 # Download required NLTK data
@@ -217,5 +220,55 @@ class Structure:
         return 0.2 * opening_score + 0.3 * transition_score + \
                0.2 * closing_score + 0.3 * coherence_score 
     
-    def calculate_and_save(self):
+
+    def get_path(self):
+        """
+        Get the path to the most recent audio file.
         
+        When recorded here are the file names:
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+            video_filename = f'output_{timestamp}.mp4'
+            audio_filename = f'output_{timestamp}.wav'
+
+            base_dir = '../data/recordings'
+
+            video_filename = base_dir + '/video/' video_filename
+            audio_filename = base_dir + '/audio/' audio_filename
+        
+        Return the most recent .wav file
+        """
+        try:
+            files = glob.glob(os.path.join(self.base_audio_path, 'output_*.wav'))
+            if not files:
+                raise FileNotFoundError(f"No WAV files found in {self.base_audio_path}")
+            
+            # Extract timestamps from filenames
+            file_times = []
+            for f in files:
+                timestamp_str = os.path.basename(f).split('_')[1].split('.')[0]
+                file_time = datetime.strptime(timestamp_str, '%Y-%m-%d_%H-%M-%S')
+                file_times.append((f, file_time))
+            
+            # Sort by timestamp and return latest
+            latest = max(file_times, key=lambda x: x[1])
+            return latest[0]
+        
+        except Exception as e:
+            print(f"Error finding audio file: {str(e)}")
+            return None
+
+    def get_message(self, filepath):
+        pass
+
+    def save_data(self, filepath):
+        pass
+
+    def calculate_and_save(self):
+        """
+        Calculate the structure score and save the data
+        """
+        message = self.get_message(self.get_path())
+        data = self.analyze_structure(message)
+        # Save the data to a file
+        self.save_data(data)

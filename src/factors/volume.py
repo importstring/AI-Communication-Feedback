@@ -33,7 +33,7 @@ class VolumeVarience:
 
             return rms_values
 
-    def calculate_variance(self, rms_values: list) -> float:
+    def calculate_and_save(self, rms_values: list) -> float:
         """
         Calculate the variance of the RMS values.
         """
@@ -47,7 +47,7 @@ class VolumeVarience:
         Saves the data to a file in the ../data/measurements/{date recorded}/analysis.parquet
         """
         pass # TODO: DO IT QUICKLY
-    
+
     def get_path(self):
         """
         Get the path to the most recent audio file.
