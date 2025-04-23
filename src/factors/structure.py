@@ -216,3 +216,6 @@ class Structure:
         """Calculate overall structure score"""
         return 0.2 * opening_score + 0.3 * transition_score + \
                0.2 * closing_score + 0.3 * coherence_score 
+    
+    def calculate_and_save(self):
+        
