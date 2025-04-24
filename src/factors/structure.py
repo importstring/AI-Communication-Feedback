@@ -29,6 +29,7 @@ class Structure:
             'circle_back_to_opening'
         ]
         self.stop_words = set(stopwords.words('english'))
+        self.base_audio_path = '../data/recordings/audio'
         
     def analyze_structure(self, message: str) -> Dict:
         """
@@ -259,7 +260,16 @@ class Structure:
             return None
 
     def get_message(self, filepath):
-        pass
+        from helper import AudioTranscriber
+        """
+        Get the message from the audio file.
+        """
+        audio_transcriber = AudioTranscriber(filepath)
+        audio_transcriber.convert_to_wav()
+        transcript = audio_transcriber.transcribe()
+        if not transcript:
+            raise ValueError(f"Transcription failed for file: {filepath}")
+        return transcript
 
     def save_data(self, filepath):
         pass
