@@ -5,6 +5,7 @@ from datetime import datetime
 import speech_recognition as sr
 from pydub import AudioSegment
 import os
+from ..parquet_management import ReadWrite
 
 # Main Class
 class AudioTranscriber:
@@ -42,6 +43,36 @@ class AudioTranscriber:
         with open(output_path, 'w') as f:
             f.write(self.transcript)
         return output_path
+
+def save_factor_data(data, factor_name, custom_filename=None):
+    """
+    Standard function to save factor analysis data to parquet format.
+    
+    Args:
+        data: Data to save (dict, list, or DataFrame)
+        factor_name: Name of the factor (e.g., 'volume', 'emotions')
+        custom_filename: Optional custom filename, otherwise uses timestamp
+        
+    Returns:
+        Filepath where data was saved
+    """
+    # Initialize ReadWrite utility
+    rw = ReadWrite()
+    
+    # Create filename with timestamp if not provided
+    if not custom_filename:
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"{factor_name}_{timestamp}.parquet"
+    else:
+        filename = custom_filename
+        if not filename.endswith('.parquet'):
+            filename += '.parquet'
+            
+    # Save to measurements/factor_name directory
+    sub_dir = os.path.join("measurements", factor_name)
+    
+    # Save and return filepath
+    return rw.write_parquet(data=data, file=filename, sub_dir=sub_dir)
 
 # Test case
 if __name__ == "__main__":

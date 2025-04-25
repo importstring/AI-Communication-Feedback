@@ -3,6 +3,8 @@ import numpy as np
 import os
 import glob
 from datetime import datetime
+from .helper import save_factor_data
+import pandas as pd
 
 class VolumeVarience:
     def __init__(self):
@@ -17,8 +19,8 @@ class VolumeVarience:
             Returns a list of RMS values for each interval.
         """
         with wave.open(audio_path, 'rb') as wav_file:
-            frame_rate = wav_file.getframerate
-            n_frames= wav_file.getnframes()
+            frame_rate = wav_file.getframerate()
+            n_frames = wav_file.getnframes()
             frames_per_interval = int(frame_rate * interval)
             rms_values = []
             for start in range(0, n_frames, frames_per_interval):
@@ -28,25 +30,55 @@ class VolumeVarience:
                     break
                 
                 audio_array = np.frombuffer(frames, dtype=np.int16) / 32768.0
-                rms = np.sqrt(np.mean(np.sqaure(audio_array)))
+                rms = np.sqrt(np.mean(np.square(audio_array)))
                 rms_values.append(rms)
 
             return rms_values
 
-    def calculate_and_save(self, rms_values: list) -> float:
+    def calculate_and_save(self) -> dict:
         """
-        Calculate the variance of the RMS values.
+        Calculate the variance of the RMS values and save the data.
+        
+        Returns:
+            Dictionary with analysis results and save path
         """
         path = self.get_path()
+        if not path:
+            return {'error': 'No audio file found'}
+            
+        # Calculate RMS values
         data = self.calculate_rms(path)
-        self.save_data(data, path)
+        
+        # Save data and return results with path
+        save_path = self.save_data(data, path)
+        
+        return {
+            'rms_values': data,
+            'volume_variance': self.volume_variance,
+            'audio_path': path,
+            'save_path': save_path
+        }
 
-    def save_data(self, data, path):
+    def save_data(self, data, audio_path):
         """
         Takes the input data and the path of the input file 
         Saves the data to a file in the ../data/measurements/{date recorded}/analysis.parquet
         """
-        pass # TODO: DO IT QUICKLY
+        # Create DataFrame with timestamp and RMS values
+        timestamps = np.arange(len(data)) * 0.25  # Assuming 0.25s intervals
+        
+        df = pd.DataFrame({
+            'timestamp': timestamps,
+            'rms_value': data,
+            'audio_source': os.path.basename(audio_path)
+        })
+        
+        # Calculate and store variance
+        self.volume_variance = np.var(data)
+        df['volume_variance'] = self.volume_variance
+        
+        # Use the helper function to save data
+        return save_factor_data(df, 'volume')
 
     def get_path(self):
         """

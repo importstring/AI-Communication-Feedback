@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import datetime
 from ..parquet_management import ReadWrite
+from .helper import save_factor_data
 
 class JointMap():
     """

@@ -4,6 +4,7 @@ import pandas as pd
 from disvoice.prosody import Prosody
 from datetime import datetime
 from ..parquet_management import ReadWrite  
+from .helper import save_factor_data
 
 
 class TonalAnalyzer:
@@ -73,10 +74,7 @@ class TonalAnalyzer:
             'dynamic_features': dynamic.tolist()
         })
         
-        self.rw.write_parquet(
-            data=feature_df, 
-            file=f"tonal_features_{datetime.now().strftime('%Y-%m-%d')}.parquet"
-        )
+        save_factor_data(feature_df, 'tonation', f"tonal_features_{datetime.now().strftime('%Y-%m-%d')}.parquet")
         return feature_df
 
     def real_time_analysis(self, audio_buffer: np.ndarray) -> dict:

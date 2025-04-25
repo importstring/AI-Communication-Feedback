@@ -7,6 +7,7 @@ import glob
 import os
 from datetime import datetime
 import numpy as np
+from difflib import SequenceMatcher
 
 # Download required NLTK data
 nltk.download('punkt')
@@ -30,6 +31,7 @@ class Structure:
         ]
         self.stop_words = set(stopwords.words('english'))
         self.base_audio_path = '../data/recordings/audio'
+        self.opening_text = ""  # Store opening text for circle-back comparison
         
     def analyze_structure(self, message: str) -> Dict:
         """
@@ -43,6 +45,12 @@ class Structure:
         """
         # Split message into sentences
         sentences = sent_tokenize(message)
+        
+        # Store opening for later comparison
+        if sentences:
+            # Consider the first 1-2 sentences as the opening
+            opening_length = min(2, len(sentences))
+            self.opening_text = ' '.join(sentences[:opening_length])
         
         # Analyze opening
         opening_score = self._analyze_opening(sentences[0] if sentences else "")
@@ -146,11 +154,16 @@ class Structure:
     
     def _check_closing_technique(self, text: str, technique: str) -> bool:
         """Check if text uses a specific closing technique"""
+        if technique == 'circle_back_to_opening':
+            # Compare with opening text
+            if hasattr(self, 'opening_text') and self.opening_text:
+                return self._check_circle_back(text, self.opening_text)
+            return False
+            
         technique_markers = {
-            'summary': ['in summary', 'to summarize', 'in conclusion'],
-            'call_to_action': ['should', 'must', 'take action', 'recommend'],
-            'future_outlook': ['future', 'next', 'going forward', 'will'],
-            'circle_back_to_opening': []  # This requires comparing to opening
+            'summary': ['in summary', 'to summarize', 'in conclusion', 'to conclude', 'wrapping up', 'to sum up'],
+            'call_to_action': ['should', 'must', 'take action', 'recommend', 'urge', 'encourage', 'call upon'],
+            'future_outlook': ['future', 'next', 'going forward', 'will', 'plan', 'vision', 'look ahead']
         }
         
         markers = technique_markers.get(technique, [])
@@ -158,6 +171,26 @@ class Structure:
             if marker.lower() in text.lower():
                 return True
         return False
+        
+    def _check_circle_back(self, closing_text: str, opening_text: str) -> bool:
+        """Check if closing text circles back to the opening"""
+        # Extract key phrases (first and last few words)
+        opening_words = opening_text.lower().split()[:5]
+        closing_words = closing_text.lower().split()[-5:]
+        
+        # Calculate similarity ratio
+        similarity = SequenceMatcher(None, opening_words, closing_words).ratio()
+        
+        # Also check for thematic words from opening appearing in closing
+        opening_themes = set([w for w in opening_text.lower().split() 
+                           if len(w) > 4 and w not in self.stop_words])
+        closing_themes = set([w for w in closing_text.lower().split() 
+                           if len(w) > 4])
+        
+        theme_overlap = len(opening_themes.intersection(closing_themes)) / len(opening_themes) if opening_themes else 0
+        
+        # Return true if either similarity is high or thematic overlap is significant
+        return similarity > 0.4 or theme_overlap > 0.3
     
     def _score_closing(self, closing_text: str, technique: str) -> float:
         """Score the effectiveness of the closing"""
@@ -271,8 +304,18 @@ class Structure:
             raise ValueError(f"Transcription failed for file: {filepath}")
         return transcript
 
-    def save_data(self, filepath):
-        pass
+    def save_data(self, data):
+        """
+        Save the structure analysis data to a parquet file
+        
+        Args:
+            data: Dictionary containing analysis results
+        
+        Returns:
+            Path to the saved file
+        """
+        from .helper import save_factor_data
+        return save_factor_data(data, 'structure')
 
     def calculate_and_save(self):
         """
