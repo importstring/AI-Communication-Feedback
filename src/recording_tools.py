@@ -36,7 +36,11 @@ class RecordVideo:
     def update_path(self, sub_dir='', filename=''):
         output = self.base_dir
         output += sub_dir if sub_dir != "" else ""
-        output += '/' + filename if filename != '' else ""
+        if filename != '':
+            if output.endswith('/'):
+                output += filename
+            else:
+                output += '/' + filename
         return output
 
     def record_audio(self):
