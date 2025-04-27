@@ -6,17 +6,18 @@ import nltk
 from nltk.tokenize import sent_tokenize
 import re
 
-# Ensure NLTK data is downloaded
+# Ensure required NLTK resources are downloaded
 try:
     nltk.data.find('tokenizers/punkt')
+    nltk.data.find('corpora/wordnet')
 except LookupError:
     nltk.download('punkt')
+    nltk.download('wordnet')
 
 class CoherenceAnalyzer:
-    """Analyzes the coherence of presentation content and speech."""
+    """Analyzes text coherence using topic consistency and discourse markers."""
     
     def __init__(self):
-        self.coherence_score = None
         self.coherence_metrics = {}
         self.discourse_markers = {
             'causal': ['because', 'therefore', 'thus', 'consequently', 'as a result', 'so'],
@@ -25,184 +26,119 @@ class CoherenceAnalyzer:
             'temporal': ['first', 'second', 'finally', 'next', 'then', 'previously'],
             'exemplification': ['for example', 'for instance', 'such as', 'specifically', 'to illustrate']
         }
-    
-    def analyze_coherence(self, text):
+
+    def analyze_coherence(self, text: str) -> dict:
         """
-        Analyze text coherence by measuring topic consistency and flow.
+        Analyze text coherence through multiple linguistic metrics.
         
         Args:
-            text: Transcribed text of the presentation
+            text: Input text to analyze
             
         Returns:
-            Dictionary with coherence metrics
+            Dictionary containing coherence metrics
         """
-        if not text or len(text.strip()) == 0:
+        if not text.strip():
             return self._empty_metrics()
             
-        # Split text into sentences
         sentences = sent_tokenize(text)
         if len(sentences) < 2:
             return self._empty_metrics()
         
-        # Analyze topic consistency
-        topic_consistency = self._analyze_topic_consistency(sentences)
-        
-        # Analyze logical flow using discourse markers
-        logical_flow = self._analyze_logical_flow(text, sentences)
-        
-        # Analyze sentence length distribution for readability
-        sentence_metrics = self._analyze_sentences(sentences)
-        
-        # Calculate overall coherence score
-        overall_coherence = (
-            0.4 * topic_consistency + 
-            0.4 * logical_flow + 
-            0.2 * sentence_metrics['sentence_length_consistency']
-        )
-        
-        # Store the results
-        self.coherence_metrics = {
-            'topic_consistency': round(topic_consistency, 2),
-            'logical_flow': round(logical_flow, 2),
-            'sentence_metrics': sentence_metrics,
-            'overall_coherence': round(overall_coherence, 2),
+        # Calculate metrics
+        metrics = {
+            'topic_consistency': self._topic_consistency(sentences),
+            'logical_flow': self._logical_flow(text, sentences),
+            'sentence_metrics': self._sentence_analysis(sentences),
             'sentence_count': len(sentences)
         }
         
-        self.coherence_score = overall_coherence
+        # Calculate weighted overall score
+        metrics['overall_coherence'] = round(
+            0.4 * metrics['topic_consistency'] + 
+            0.4 * metrics['logical_flow'] + 
+            0.2 * metrics['sentence_metrics']['length_consistency'], 2
+        )
         
-        return self.coherence_metrics
-    
-    def _empty_metrics(self):
-        """Return empty metrics when text is insufficient"""
+        self.coherence_metrics = metrics
+        return metrics
+
+    def _empty_metrics(self) -> dict:
+        """Return baseline metrics for empty/invalid input"""
         return {
             'topic_consistency': 0.0,
             'logical_flow': 0.0,
             'sentence_metrics': {
-                'avg_sentence_length': 0.0,
-                'sentence_length_consistency': 0.0,
-                'min_sentence_length': 0,
-                'max_sentence_length': 0
+                'avg_length': 0.0,
+                'length_consistency': 0.0,
+                'min_length': 0,
+                'max_length': 0
             },
             'overall_coherence': 0.0,
             'sentence_count': 0
         }
-    
-    def _analyze_topic_consistency(self, sentences):
-        """Analyze how consistently topics are maintained across sentences"""
-        # Simple bag-of-words approach
-        word_sets = [set(re.findall(r'\b\w+\b', sentence.lower())) for sentence in sentences]
+
+    def _topic_consistency(self, sentences: list) -> float:
+        """Calculate Jaccard similarity between adjacent sentences."""
+        tokens = [set(re.findall(r'\w+', s.lower())) for s in sentences]
+        similarities = []
         
-        # Calculate overlap between adjacent sentences
-        overlaps = []
-        for i in range(len(word_sets) - 1):
-            if not word_sets[i] or not word_sets[i+1]:
-                continue
-                
-            # Jaccard similarity between adjacent sentences
-            intersection = len(word_sets[i] & word_sets[i+1])
-            union = len(word_sets[i] | word_sets[i+1])
-            overlaps.append(intersection / union if union > 0 else 0)
-        
-        # Calculate average overlap as a measure of topic consistency
-        avg_overlap = np.mean(overlaps) if overlaps else 0.0
-        
-        # Scale to 0-1 where higher is better
-        return min(1.0, avg_overlap * 2.5)  # Scale up since natural overlap is often low
-    
-    def _analyze_logical_flow(self, text, sentences):
-        """Analyze the logical flow using discourse markers"""
-        # Count discourse markers by type
-        marker_counts = {
-            marker_type: sum(1 for marker in markers if marker in text.lower())
-            for marker_type, markers in self.discourse_markers.items()
+        for i in range(len(tokens)-1):
+            intersect = len(tokens[i] & tokens[i+1])
+            union = len(tokens[i] | tokens[i+1])
+            similarities.append(intersect/union if union else 0)
+            
+        avg_sim = np.mean(similarities) if similarities else 0.0
+        return min(1.0, avg_sim * 2.5)  # Scale low natural overlap
+
+    def _logical_flow(self, text: str, sentences: list) -> float:
+        """Analyze discourse marker usage patterns."""
+        lower_text = text.lower()
+        counts = {
+            k: sum(1 for m in v if m in lower_text)
+            for k, v in self.discourse_markers.items()
         }
         
-        # Calculate marker diversity (0-1)
-        total_marker_types = len(self.discourse_markers)
-        types_used = sum(1 for count in marker_counts.values() if count > 0)
-        marker_diversity = types_used / total_marker_types if total_marker_types > 0 else 0
+        # Calculate diversity and density
+        diversity = sum(1 for c in counts.values() if c > 0) / len(counts)
+        density = sum(counts.values()) / (len(sentences) + 1e-6)  # Prevent division by zero
         
-        # Calculate marker density relative to sentence count
-        total_markers = sum(marker_counts.values())
-        marker_density = min(1.0, total_markers / (len(sentences) * 0.8))
-        
-        # Combine diversity and density for logical flow score
-        return 0.6 * marker_diversity + 0.4 * marker_density
-    
-    def _analyze_sentences(self, sentences):
-        """Analyze sentence length and structure"""
-        # Calculate lengths
-        lengths = [len(re.findall(r'\b\w+\b', s)) for s in sentences]
-        
+        return round(0.6 * diversity + 0.4 * min(density, 1.0), 2)
+
+    def _sentence_analysis(self, sentences: list) -> dict:
+        """Analyze sentence length distribution."""
+        lengths = [len(re.findall(r'\w+', s)) for s in sentences]
         if not lengths:
-            return {
-                'avg_sentence_length': 0.0,
-                'sentence_length_consistency': 0.0,
-                'min_sentence_length': 0,
-                'max_sentence_length': 0
-            }
-        
-        avg_length = np.mean(lengths)
-        std_length = np.std(lengths)
-        
-        # Calculate consistency (lower std_dev/mean ratio is more consistent)
-        length_consistency = 1.0 - min(1.0, (std_length / avg_length) if avg_length > 0 else 0)
+            return self._empty_metrics()['sentence_metrics']
+            
+        avg = np.mean(lengths)
+        std = np.std(lengths)
         
         return {
-            'avg_sentence_length': round(avg_length, 1),
-            'sentence_length_consistency': round(length_consistency, 2),
-            'min_sentence_length': min(lengths),
-            'max_sentence_length': max(lengths)
+            'avg_length': round(avg, 1),
+            'length_consistency': round(1 - min(std/avg, 1) if avg else 0, 2),
+            'min_length': min(lengths),
+            'max_length': max(lengths)
         }
-    
-    def save_data(self, data=None):
-        """
-        Save coherence analysis data to a parquet file.
-        
-        Args:
-            data: Optional data to save, uses self.coherence_metrics if None
-            
-        Returns:
-            Path to the saved file
-        """
-        # Use class data if none provided
-        if data is None:
-            data = self.coherence_metrics
-            
-        # Convert to DataFrame if it's a dict
-        if isinstance(data, dict):
-            # Flatten nested dictionary
-            flat_data = self._flatten_dict(data)
-            data = pd.DataFrame([flat_data])
-            
-        return save_factor_data(data, 'coherence')
-    
-    def _flatten_dict(self, d, parent_key='', sep='_'):
-        """Flatten nested dictionary for DataFrame conversion"""
+
+    def save_data(self, data: dict = None) -> str:
+        """Save metrics to parquet format using helper function."""
+        data = data or self.coherence_metrics
+        df = pd.DataFrame([self._flatten_dict(data)])
+        return save_factor_data(df, 'coherence')
+
+    def _flatten_dict(self, data: dict, parent_key: str = '', sep: str = '_') -> dict:
+        """Flatten nested dictionary structure."""
         items = []
-        for k, v in d.items():
-            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        for k, v in data.items():
+            key = f"{parent_key}{sep}{k}" if parent_key else k
             if isinstance(v, dict):
-                items.extend(self._flatten_dict(v, new_key, sep=sep).items())
+                items.extend(self._flatten_dict(v, key, sep).items())
             else:
-                items.append((new_key, v))
+                items.append((key, v))
         return dict(items)
-    
-    def analyze_and_save(self, text):
-        """
-        Analyze coherence and save results.
-        
-        Args:
-            text: Text to analyze
-            
-        Returns:
-            Dictionary with coherence metrics
-        """
-        results = self.analyze_coherence(text)
-        save_path = self.save_data(results)
-        
-        # Add save path to results
-        results['save_path'] = save_path
-        
-        return results
+
+    def analyze_and_save(self, text: str) -> dict:
+        """Convenience method to analyze and save in one call."""
+        metrics = self.analyze_coherence(text)
+        metrics['save_path'] = self.save_data(metrics)
+        return metrics
