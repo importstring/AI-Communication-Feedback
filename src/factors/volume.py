@@ -46,10 +46,8 @@ class VolumeVarience:
         if not path:
             return {'error': 'No audio file found'}
             
-        # Calculate RMS values
         data = self.calculate_rms(path)
         
-        # Save data and return results with path
         save_path = self.save_data(data, path)
         
         return {
@@ -64,8 +62,7 @@ class VolumeVarience:
         Takes the input data and the path of the input file 
         Saves the data to a file in the ../data/measurements/{date recorded}/analysis.parquet
         """
-        # Create DataFrame with timestamp and RMS values
-        timestamps = np.arange(len(data)) * 0.25  # Assuming 0.25s intervals
+        timestamps = np.arange(len(data)) * 0.25  
         
         df = pd.DataFrame({
             'timestamp': timestamps,
@@ -73,11 +70,9 @@ class VolumeVarience:
             'audio_source': os.path.basename(audio_path)
         })
         
-        # Calculate and store variance
         self.volume_variance = np.var(data)
         df['volume_variance'] = self.volume_variance
         
-        # Use the helper function to save data
         return save_factor_data(df, 'volume')
 
     def get_path(self):
@@ -102,14 +97,12 @@ class VolumeVarience:
             if not files:
                 raise FileNotFoundError(f"No WAV files found in {self.base_audio_path}")
             
-            # Extract timestamps from filenames
             file_times = []
             for f in files:
                 timestamp_str = os.path.basename(f).split('_')[1].split('.')[0]
                 file_time = datetime.strptime(timestamp_str, '%Y-%m-%d_%H-%M-%S')
                 file_times.append((f, file_time))
             
-            # Sort by timestamp and return latest
             latest = max(file_times, key=lambda x: x[1])
             return latest[0]
         
