@@ -2,6 +2,7 @@ import pyarrow.parquet as pq
 import pyarrow as pa
 import pandas as pd
 import os
+import sys
 
 class ReadWrite:
     """
@@ -32,3 +33,16 @@ class ReadWrite:
             table, filepath, compression='snappy'
         )
         return filepath
+
+if __name__ == "__main__":
+    
+    if input('test function? (y/n): ').strip().lower() == 'y':
+
+        rw = ReadWrite()
+        data = {'column1': [1, 2, 3], 'column2': ['a', 'b', 'c']}
+        file_path = rw.write_parquet(data, 'example.parquet', 'sub_dir')
+        print(f"Data written to {file_path}")
+
+    else:
+        print("No test performed.\nexiting")
+        sys.exit(0)
