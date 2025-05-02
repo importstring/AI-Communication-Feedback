@@ -5,6 +5,7 @@ from pydub import AudioSegment
 import os
 import wave
 import json
+import glob
 from vosk import Model, KaldiRecognizer
 from pathlib import Path
 from ..parquet_management import ReadWrite
@@ -78,6 +79,70 @@ class AudioTranscriber:
             f.write(self.transcript)
             
         return str(output_path.resolve())
+
+import glob
+import os
+from datetime import datetime
+
+class FileManager:
+    def __init__(self):
+        self.base_audio_path = '../data/recording/audio/'
+        self.base_video_path = '../data/recording/video/'
+        self.base_transcript_path = '../data/recording/transcripts/'
+        self.base_measurements_path = '../data/recording/measurements/'
+        self.transcripts_path = '/transcripts/'
+
+    def get_path(self, video: bool = False, audio: bool = False, transcript: bool = False) -> str:
+        """
+        Get the path to the most recent file of the specified type.
+        
+        When recorded, files are named with a timestamp:
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        
+        video_filename = f'{timestamp}.mp4'
+        audio_filename = f'{timestamp}.wav'
+        
+        Returns the full path to the most recent file of the requested type.
+        """
+        file_extensions = {
+            'audio': 'wav', 
+            'video': 'mp4',
+            'transcript': 'txt'
+        }
+        paths = {
+            'audio': self.base_audio_path,
+            'video': self.base_video_path,
+            'transcript': self.base_transcript_path
+        }
+
+        file_type = 'audio' if audio else 'video' if video else 'transcript'
+        file_extension = file_extensions[file_type]
+        base_path = paths[file_type]
+        
+        try:
+            files = glob.glob(os.path.join(base_path, f'output_*.{file_extension}'))
+            if not files:
+                raise FileNotFoundError(f"No {file_extension} files found in {base_path}")
+            
+            file_times = []
+
+            for f in files:
+                try:
+                    timestamp_str = os.path.basename(f).split('_')[1].split('.')[0]
+                    file_time = datetime.strptime(timestamp_str, '%Y-%m-%d_%H-%M-%S')
+                    file_times.append((f, file_time))
+                except (IndexError, ValueError):
+                    continue
+            
+            if not file_times:
+                raise ValueError(f"No files with valid timestamp format found in {base_path}")
+                
+            latest = max(file_times, key=lambda x: x[1])
+            return latest[0]
+        
+        except Exception as e:
+            print(f"Error finding {file_type} file: {str(e)}")
+            return None
 
 def save_factor_data(data, factor_name, custom_filename=None):
     """
