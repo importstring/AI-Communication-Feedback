@@ -138,4 +138,15 @@ class SpeechPatternAnalyzer:
         # Add save path to results
         results['save_path'] = save_path
         
-        return results
+
+    def read_transcript(self):
+        file = open(self.transcript_path, 'r')
+        text = file.read()
+        file.close()
+        return text
+
+    def main(self, timestamp):
+        self.timestamp = timestamp
+        self.transcript_path = f'transcripts/{timestamp}.txt'
+        text = self.read_transcript()
+        self.analyze_and_save(text)

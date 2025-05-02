@@ -14,7 +14,7 @@ class AudioTranscriber:
         self.audio_path = audio_path
         self.model_path = Path(model_path)
         self.transcript = ""
-        self.save_path = '../data/measurements/'
+        self.save_path = '../data/recordings/transcripts'
         
         if not self.model_path.exists():
             raise FileNotFoundError(f"Vosk model not found at {self.model_path}. Download from https://alphacephei.com/vosk/models")
