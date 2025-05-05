@@ -3,6 +3,8 @@ from src.analysis import analyze_video
 from src.recording_tools import record
 from src.factors.helper import AudioTranscriber
 from datetime import datetime
+import sys
+import os
 
 class Recording:
 	def __init__(self):
@@ -14,7 +16,8 @@ class Recording:
 
 	def save_transcript(self):
 		self.timestamp()
-		# See info on helper on the rigth to properly finish the save_transcript function and from there taylor it to the correct dir 
+		transcriber = AudioTranscriber()
+		transcriber.save_transcript(self.audio_path, self.transcript_path)
 
 	def capture(self):
 		record(self.timestamp)
@@ -23,19 +26,23 @@ class Recording:
 def record_video():
 	recording = Recording()
 	recording.capture()
+	recording.save_transcript()
+	return recording
 	
-
-
 def main():
 	while True:
 		choices = [
-			'Record video' 'Exit'
+			'Record video', 'Analyze video', 'Exit'
 		]
 
 		command = ask_multiple_choice(choices) 
 	
 		if command == 'Record video':
+			recording = record_video()
+		elif command == 'Analyze video':
+			pass
+		else:
+			sys.exit(0)
 			
-
 if __name__ == "__main__":
 	main()
