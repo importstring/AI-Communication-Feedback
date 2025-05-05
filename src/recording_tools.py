@@ -6,8 +6,7 @@ from datetime import datetime
 import threading
 
 class RecordVideo:
-    def __init__(self):
-        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    def __init__(self, timestamp: str):
         self.base_dir = '../data/recordings'
         
         self.video_filename = f'output_{timestamp}.mp4'
@@ -92,7 +91,7 @@ class RecordVideo:
             wf.setframerate(self.sampling_rate)
             wf.writeframes(b''.join(frames))
 
-def record(sub_dir="", filename=""):
+def record(timestamp, sub_dir="", filename=""):
     """
     Records video and audio simultaneously until 'q' is pressed.
     
@@ -101,7 +100,7 @@ def record(sub_dir="", filename=""):
         filename (str): Optional custom filename for the recording
     """
     try:
-        video_class = RecordVideo()
+        video_class = RecordVideo(timestamp)
         
         if sub_dir or filename:
             custom_path = video_class.update_path(sub_dir, filename)

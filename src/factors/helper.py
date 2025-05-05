@@ -80,9 +80,6 @@ class AudioTranscriber:
             
         return str(output_path.resolve())
 
-import glob
-import os
-from datetime import datetime
 
 class FileManager:
     def __init__(self):
@@ -92,6 +89,34 @@ class FileManager:
         self.base_measurements_path = '../data/recording/measurements/'
         self.transcripts_path = '/transcripts/'
 
+    def get_timestamp(self) -> str:
+        """
+        Get the timestamp of the most recent recording
+        """
+        path = self.get_path(video=True, audio=False, transcript=False)
+        if path is None:
+            return None
+        
+        filename = os.path.basename(path)
+
+        try: # Expected format: output_YYYY-MM-DD_HH-MM-SS.ext
+            parts = filename.split('_')
+            
+            if len(parts) < 3 or parts[0] != 'output':
+                raise ValueError(f"Filename {filename} does not match expected format 'output_YYYY-MM-DD_HH-MM-SS.ext'")
+            
+            date_part = parts[1]
+            time_part = parts[2].split('.')[0]
+            timestamp_str = f"{date_part}_{time_part}"
+            
+            datetime.strptime(timestamp_str, '%Y-%m-%d_%H-%M-%S')
+            
+            return timestamp_str
+        except (IndexError, ValueError) as e:
+            print(f"Filename {filename} does not contain a valid timestamp: {str(e)}")
+            return None
+
+
     def get_path(self, video: bool = False, audio: bool = False, transcript: bool = False) -> str:
         """
         Get the path to the most recent file of the specified type.
@@ -99,8 +124,8 @@ class FileManager:
         When recorded, files are named with a timestamp:
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         
-        video_filename = f'{timestamp}.mp4'
-        audio_filename = f'{timestamp}.wav'
+        video_filename = f'output_{timestamp}.mp4'
+        audio_filename = f'output_{timestamp}.wav'
         
         Returns the full path to the most recent file of the requested type.
         """
