@@ -39,18 +39,15 @@ class SpeechPatternAnalyzer:
             speaking_rate_wpm = len(words) / (audio_duration / 60) if audio_duration > 0 else 0
             speaking_rate_wps = len(words) / audio_duration if audio_duration > 0 else 0
         else:
-            # Estimate based on average speaking rate if no audio
             speaking_rate_wpm = len(words) / (len(text) / 1000)
             speaking_rate_wps = speaking_rate_wpm / 60
         
-        # Count filler words
         filler_word_counts = {
             word: sum(1 for w in words if w == word) 
             for word in self.filler_words if word in words
         }
         filler_count = sum(filler_word_counts.values())
         
-        # Analyze pauses if provided
         pause_analysis = {}
         if pauses:
             total_pause = sum(pauses)
@@ -62,8 +59,6 @@ class SpeechPatternAnalyzer:
                 'longest_pause': round(max(pauses), 2) if pauses else 0
             }
         
-        # Calculate speech fluency score (0-1)
-        # Lower score with more filler words and longer pauses
         if pauses and len(words) > 0:
             filler_ratio = filler_count / len(words)
             pause_ratio = total_pause / audio_duration if audio_duration else 0
@@ -72,7 +67,6 @@ class SpeechPatternAnalyzer:
             filler_ratio = filler_count / len(words) if len(words) > 0 else 0
             fluency_score = 1.0 - min(1.0, filler_ratio)
         
-        # Store results
         self.metrics = {
             'words_per_minute': round(speaking_rate_wpm, 2),
             'words_per_second': round(speaking_rate_wps, 2),
