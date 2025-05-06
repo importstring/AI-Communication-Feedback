@@ -99,13 +99,10 @@ class SpeechPatternAnalyzer:
         Returns:
             Path to the saved file
         """
-        # Use class data if none provided
         if data is None:
             data = self.metrics
-            
-        # Convert to DataFrame if it's a dict
+        
         if isinstance(data, dict):
-            # Handle nested structures
             flat_data = self._flatten_dict(data)
             data = pd.DataFrame([flat_data])
             
