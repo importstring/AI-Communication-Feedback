@@ -72,8 +72,9 @@ class JointMap:
                     lmk.z * width
                 )
 
-    def _save_results(self, video_path: str) -> pd.DataFrame:
+    def _save_results(self):
         """Convert results to DataFrame and save as parquet"""
+        video_path = get_video_path()
         df = pd.DataFrame(
             {frame: self._flatten_landmarks(data) 
              for frame, data in self.states.items()}
@@ -88,4 +89,3 @@ class JointMap:
             for joint, coords in landmarks.items()
             for coord, value in zip(['x', 'y', 'z'], coords)
         }
-
