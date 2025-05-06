@@ -32,11 +32,9 @@ class SpeechPatternAnalyzer:
         Returns:
             Dictionary with speech pattern metrics
         """
-        # Process text for word patterns
         words = re.findall(r'\b\w+\b', text.lower())
         word_freq = Counter(words)
         
-        # Calculate speaking metrics
         if audio_duration:
             speaking_rate_wpm = len(words) / (audio_duration / 60) if audio_duration > 0 else 0
             speaking_rate_wps = len(words) / audio_duration if audio_duration > 0 else 0

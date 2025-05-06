@@ -22,7 +22,6 @@ class CoherenceAnalyzer:
     
     def __init__(self, timestamp: str):
         self.coherence_metrics = {}
-        self.timestamp = timestamp 
         self.discourse_markers = {
             'causal': ['because', 'therefore', 'thus', 'consequently', 'as a result', 'so'],
             'contrast': ['however', 'but', 'nevertheless', 'on the other hand', 'in contrast', 'yet'],
@@ -30,6 +29,9 @@ class CoherenceAnalyzer:
             'temporal': ['first', 'second', 'finally', 'next', 'then', 'previously'],
             'exemplification': ['for example', 'for instance', 'such as', 'specifically', 'to illustrate']
         }
+        
+        self.timestamp = timestamp 
+
 
     def analyze_coherence(self, text: str) -> dict:
         """

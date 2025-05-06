@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from pathlib import Path
-from .helper import save_factor_data, get_video_path, get_audio_path, get_transcript_path
+from .helper import save_factor_data, get_video_path, get_audio_path, get_transcript_path, read_transcript
 
 class JointMap:
     """Analyzes body language using pose estimation and movement patterns."""
@@ -15,7 +15,6 @@ class JointMap:
         self.states = {}  # Frame: {Joint: (x, y, z)}
         self.model_path = Path(model_path).absolute()
         
-        # MediaPipe configuration
         self.BaseOptions = mp.tasks.BaseOptions
         self.PoseLandmarker = mp.tasks.vision.PoseLandmarker
         self.PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
@@ -29,7 +28,6 @@ class JointMap:
         fps = cap.get(cv2.CAP_PROP_FPS)
         frame_count = 0
 
-        # Use context manager for proper resource handling
         with self._create_landmarker() as landmarker:
             while cap.isOpened():
                 ret, frame = cap.read()
