@@ -5,9 +5,10 @@ from .helper import save_factor_data
 import nltk
 from nltk.tokenize import sent_tokenize
 import re
+from pathlib import Path
 import typing
+import os
 
-# Ensure required NLTK resources are downloaded
 try:
     nltk.data.find('tokenizers/punkt')
     nltk.data.find('corpora/wordnet')
@@ -139,7 +140,25 @@ class CoherenceAnalyzer:
                 items.append((key, v))
         return dict(items)
 
+    def read_transcript(self):
+        transcript_path = self.get_transcript_path()
+        file = open(transcript_path, 'r')
+        text = file.read()
+        file.close()
+        return text
+
     def analyze_and_save(self, text: str) -> dict:
         """Convenience method to analyze and save in one call."""
+        text = self.read_transcript()
         metrics = self.analyze_coherence(text)
-        metrics['save_path'] = self.save_data(metrics)
+        self.save_data(metrics)
+
+    def get_transcript_path(self):
+        current_file = Path(__file__).resolve()
+
+        project_root = current_file.parents[2]
+
+        data_dir = project_root / 'data' / 'recordings' / 'transcripts'
+        src_dir = project_root / 'src' / 'factors'
+
+        return str(data_dir) + self.timestamp        

@@ -21,6 +21,7 @@ class JointMap:
         self.PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
         self.VisionRunningMode = mp.tasks.vision.RunningMode
         self.timestamp = timestamp
+        self.video_path = self.get_video_path()
 
     def map_recording(self, video_path: str) -> pd.DataFrame:
         """Process video and store joint positions in parquet format."""
@@ -47,7 +48,7 @@ class JointMap:
         options = self.PoseLandmarkerOptions(
             base_options=self.BaseOptions(model_asset_path=str(self.model_path)),
             running_mode=self.VisionRunningMode.VIDEO,
-            num_poses=1 # Only one person
+            num_poses=1 
         )
         return self.PoseLandmarker.create_from_options(options)
 
@@ -89,3 +90,13 @@ class JointMap:
             for joint, coords in landmarks.items()
             for coord, value in zip(['x', 'y', 'z'], coords)
         }
+
+    def get_video_path(self):
+        current_file = Path(__file__).resolve()
+
+        project_root = current_file.parents[2]
+
+        data_dir = project_root / 'data' / 'recordings' / 'video'
+        src_dir = project_root / 'src' / 'factors'
+
+        return str(data_dir) + self.timestamp        
