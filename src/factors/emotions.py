@@ -9,7 +9,7 @@ from typing import Dict, Optional, Union
 import numpy as np
 
 class MultimodalEmotionAnalyzer:
-    def __init__(self, text_weight=0.7):
+    def __init__(self, text_weight=0.7, timestamp=None):
         self.text_analyzer = pipeline("text-classification", 
                                     model="j-hartmann/emotion-english-distilroberta-base",
                                     top_k=None)
@@ -21,6 +21,8 @@ class MultimodalEmotionAnalyzer:
             "superb/wav2vec2-base-superb-er"
         )
         
+        self.timestamp = timestamp
+
         self.audio_projection = nn.Linear(256, 7)
         self.attention_mlp = nn.Sequential(
             nn.Linear(256, 128),
@@ -278,7 +280,7 @@ class Emotion:
             Path to the saved file
         """
         from .helper import save_factor_data
-        return save_factor_data(emotion_data, 'emotions')
+        save_factor_data(emotion_data, 'emotions', self.timestamp)
     
     def analyze_and_save(self, text=None, audio=None):
         """
@@ -293,8 +295,4 @@ class Emotion:
         """
         results = self.detect_emotion(text=text, audio=audio)
         
-        save_path = self.save_data(results)
-        
-        results['save_path'] = save_path
-        
-        return results
+        self.save_data(results)

@@ -17,7 +17,7 @@ class Structure:
     """
     Analyzes the structure and organization of a presentation or speech.
     """
-    def __init__(self):
+    def __init__(self, timestamp: str = None):
         self.transitions = [
             'first', 'second', 'third', 'finally',
             'in addition', 'furthermore', 'moreover',
@@ -32,6 +32,8 @@ class Structure:
         self.stop_words = set(stopwords.words('english'))
         self.base_audio_path = '../data/recordings/audio'
         self.opening_text = ""  # Store opening text for circle-back comparison
+
+        self.timestamp = timestamp
         
     def analyze_structure(self, message: str) -> Dict:
         """
@@ -315,7 +317,7 @@ class Structure:
             Path to the saved file
         """
         from .helper import save_factor_data
-        return save_factor_data(data, 'structure')
+        save_factor_data(data, 'structure', self.timestamp)
 
     def calculate_and_save(self):
         """

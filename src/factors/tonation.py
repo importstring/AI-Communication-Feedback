@@ -14,7 +14,7 @@ class TonalAnalyzer:
     for temporal alignment with video analysis pipelines.
     """
     
-    def __init__(self, sr=16000, frame_length=2048, hop_length=512):
+    def __init__(self, sr=16000, frame_length=2048, hop_length=512, timestamp: str = None):
         """Initialize audio processing parameters.
         
         Args:
@@ -27,6 +27,8 @@ class TonalAnalyzer:
         self.hop_length = hop_length
         self.prosody = Prosody()
         self.rw = ReadWrite()  
+        
+        self.timestamp = timestamp
 
     def extract_features(self, audio_path: str) -> pd.DataFrame:
         """Extract prosodic features aligned with video analysis timeline.
@@ -74,8 +76,7 @@ class TonalAnalyzer:
             'dynamic_features': dynamic.tolist()
         })
         
-        save_factor_data(feature_df, 'tonation', f"tonal_features_{datetime.now().strftime('%Y-%m-%d')}.parquet")
-        return feature_df
+        save_factor_data(feature_df, 'tonation', self.timestamp)
 
     def real_time_analysis(self, audio_buffer: np.ndarray) -> dict:
         """Streaming analysis compatible with video processing frame rates.

@@ -10,7 +10,7 @@ class ReadWrite:
     To ensure we don't run into errors we allow sub_dir as an input
     """
     def __init__(self):
-        self.base_path = '../data'
+        self.base_path = os.path.join(os.path.dirname(__file__), '..', 'data')
         
     def read_parquet(self, file, sub_dir=""):
         path = os.path.join(self.base_path, sub_dir, file)

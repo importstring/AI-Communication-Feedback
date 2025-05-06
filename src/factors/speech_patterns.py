@@ -3,18 +3,21 @@ import numpy as np
 from datetime import datetime
 from .helper import save_factor_data
 import re
+from pathlib import Path
+import os
 from collections import Counter
 
 class SpeechPatternAnalyzer:
     """Analyzes speech patterns like pace, pauses, and verbal tics."""
     
-    def __init__(self):
+    def __init__(self, timestamp: str = None):
         self.patterns = {}
         self.metrics = {}
         self.filler_words = {
             'um', 'uh', 'like', 'you know', 'so', 'actually', 
             'basically', 'right', 'I mean', 'well', 'kind of'
         }
+        self.timestamp = timestamp
     
     def analyze_speech_patterns(self, text, audio=None, audio_duration=None, pauses=None):
         """
@@ -106,7 +109,7 @@ class SpeechPatternAnalyzer:
             flat_data = self._flatten_dict(data)
             data = pd.DataFrame([flat_data])
             
-        return save_factor_data(data, 'speech_patterns')
+        save_factor_data(data, 'speech_patterns', self.timestamp)
     
     def _flatten_dict(self, d, parent_key='', sep='_'):
         """Flatten nested dictionary for DataFrame conversion"""
@@ -135,18 +138,24 @@ class SpeechPatternAnalyzer:
         results = self.analyze_speech_patterns(text, audio, audio_duration, pauses)
         save_path = self.save_data(results)
         
-        # Add save path to results
-        results['save_path'] = save_path
         
+    def get_transcript_path(self):
+        current_file = Path(__file__).resolve()
+
+        project_root = current_file.parents[2]
+
+        data_dir = project_root / 'data' / 'recordings' / 'transcripts'
+        src_dir = project_root / 'src' / 'factors'
+
+        return str(data_dir) + self.timestamp        
 
     def read_transcript(self):
-        file = open(self.transcript_path, 'r')
+        transcript_path = self.get_transcript_path()
+        file = open(transcript_path, 'r')
         text = file.read()
         file.close()
         return text
 
-    def main(self, timestamp):
-        self.timestamp = timestamp
-        self.transcript_path = f'transcripts/{timestamp}.txt'
+    def main(self):
         text = self.read_transcript()
         self.analyze_and_save(text)

@@ -11,7 +11,7 @@ from .helper import save_factor_data
 class JointMap:
     """Analyzes body language using pose estimation and movement patterns."""
     
-    def __init__(self, model_path: str = 'pose_landmarker.task'):
+    def __init__(self, model_path: str = 'pose_landmarker.task', timestamp: str = None):
         self.states = {}  # Frame: {Joint: (x, y, z)}
         self.model_path = Path(model_path).absolute()
         
@@ -20,6 +20,7 @@ class JointMap:
         self.PoseLandmarker = mp.tasks.vision.PoseLandmarker
         self.PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
         self.VisionRunningMode = mp.tasks.vision.RunningMode
+        self.timestamp = timestamp
 
     def map_recording(self, video_path: str) -> pd.DataFrame:
         """Process video and store joint positions in parquet format."""
@@ -39,7 +40,7 @@ class JointMap:
                 frame_count += 1
 
         cap.release()
-        return self._save_results(video_path)
+        self._save_results(video_path)
 
     def _create_landmarker(self):
         """Initialize pose landmarker with proper configuration"""
@@ -79,9 +80,7 @@ class JointMap:
              for frame, data in self.states.items()}
         ).T
         
-        output_path = f"{datetime.now().strftime('%Y-%m-%d')}.parquet"
-        save_factor_data(df, 'body_language', output_path)
-        return df
+        save_factor_data(df, 'body_language', self.timestamp)
 
     def _flatten_landmarks(self, landmarks: dict) -> dict:
         """Create multi-index columns for joint coordinates"""

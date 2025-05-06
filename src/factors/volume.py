@@ -7,12 +7,13 @@ from .helper import save_factor_data
 import pandas as pd
 
 class VolumeVarience:
-    def __init__(self):
+    def __init__(self, timestamp: str = None):
         self.volume = None
         self.volume_variance = None
         self.base_audio_path = '../data/recording/audio/'
         self.filename = self.get_path()
-    
+        self.timestamp = timestamp     
+        
     def calculate_rms(self, audio_path: str, interval: float = 0.25) -> float:
         """
         Calculate the root mean square (RMS) of an audio file at every point in time at 0.25 second intervals.
@@ -73,7 +74,7 @@ class VolumeVarience:
         self.volume_variance = np.var(data)
         df['volume_variance'] = self.volume_variance
         
-        return save_factor_data(df, 'volume')
+        save_factor_data(df, 'volume', self.timestamp)
 
     def get_path(self):
         """

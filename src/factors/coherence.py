@@ -5,6 +5,7 @@ from .helper import save_factor_data
 import nltk
 from nltk.tokenize import sent_tokenize
 import re
+import typing
 
 # Ensure required NLTK resources are downloaded
 try:
@@ -17,8 +18,9 @@ except LookupError:
 class CoherenceAnalyzer:
     """Analyzes text coherence using topic consistency and discourse markers."""
     
-    def __init__(self):
+    def __init__(self, timestamp: str):
         self.coherence_metrics = {}
+        self.timestamp = timestamp 
         self.discourse_markers = {
             'causal': ['because', 'therefore', 'thus', 'consequently', 'as a result', 'so'],
             'contrast': ['however', 'but', 'nevertheless', 'on the other hand', 'in contrast', 'yet'],
@@ -124,7 +126,7 @@ class CoherenceAnalyzer:
         """Save metrics to parquet format using helper function."""
         data = data or self.coherence_metrics
         df = pd.DataFrame([self._flatten_dict(data)])
-        return save_factor_data(df, 'coherence')
+        save_factor_data(df, 'coherence', self.timestamp)
 
     def _flatten_dict(self, data: dict, parent_key: str = '', sep: str = '_') -> dict:
         """Flatten nested dictionary structure."""
@@ -141,4 +143,3 @@ class CoherenceAnalyzer:
         """Convenience method to analyze and save in one call."""
         metrics = self.analyze_coherence(text)
         metrics['save_path'] = self.save_data(metrics)
-        return metrics

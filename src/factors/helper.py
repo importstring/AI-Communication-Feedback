@@ -169,20 +169,16 @@ class FileManager:
             print(f"Error finding {file_type} file: {str(e)}")
             return None
 
-def save_factor_data(data, factor_name, custom_filename=None):
+def save_factor_data(data, factor_name: str, timestamp: str):
     """
     Enhanced data saver with format validation.
     """
     rw = ReadWrite()
     
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"{factor_name}_{timestamp}.parquet" if not custom_filename else custom_filename
-    filename = filename if filename.endswith('.parquet') else f"{filename}.parquet"
+    filename = f"{factor_name}.parquet" 
     
-    if not isinstance(data, pd.DataFrame):
-        data = pd.DataFrame(data if isinstance(data, list) else [data])
-    
-    sub_dir = Path("measurements") / factor_name
+    sub_dir = timestamp
+
     return rw.write_parquet(
         data=data,
         file=filename,
