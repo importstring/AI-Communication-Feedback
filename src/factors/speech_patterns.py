@@ -125,8 +125,8 @@ class SpeechPatternAnalyzer:
             Dictionary with speech pattern metrics
         """
         results = self.analyze_speech_patterns(text, audio, audio_duration, pauses)
-        save_path = self.save_data(results)
-        
+        self.save_data(results)
+                
     def main(self):
         text = self.read_transcript()
         self.analyze_and_save(text)
