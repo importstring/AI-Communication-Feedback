@@ -7,6 +7,7 @@ from transformers import Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtra
 import torch.nn as nn
 from typing import Dict, Optional, Union
 import numpy as np
+from helper import get_audio_path, get_transcript_path, get_video_path, save_factor_data, read_transcript
 
 class MultimodalEmotionAnalyzer:
     def __init__(self, text_weight=0.7, timestamp=None):
@@ -21,8 +22,6 @@ class MultimodalEmotionAnalyzer:
             "superb/wav2vec2-base-superb-er"
         )
         
-        self.timestamp = timestamp
-
         self.audio_projection = nn.Linear(256, 7)
         self.attention_mlp = nn.Sequential(
             nn.Linear(256, 128),
@@ -30,6 +29,9 @@ class MultimodalEmotionAnalyzer:
             nn.Linear(128, 1)
         )
         self.text_weight = text_weight
+
+        self.timestamp = timestamp
+        
 
     def _map_acoustic_features(self, hidden_states):
         """Implements temporal attention pooling with learnable weights"""
@@ -133,7 +135,7 @@ class Emotion:
     """
     Detects and classifies emotions from text or audio data.
     """
-    def __init__(self):
+    def __init__(self, timestamp: str = None):
         self.emotion_analyzer = MultimodalEmotionAnalyzer()
         self.text_emotion_classifier = pipeline(
             "text-classification", 
@@ -146,6 +148,7 @@ class Emotion:
             "superb/wav2vec2-base-superb-er"
         )
         self.emotion = None
+        self.timestamp = timestamp
 
     def detect_emotion(self, text: Optional[str] = None, 
                       audio: Optional[Union[str, np.ndarray]] = None) -> Dict:
@@ -282,7 +285,7 @@ class Emotion:
         from .helper import save_factor_data
         save_factor_data(emotion_data, 'emotions', self.timestamp)
     
-    def analyze_and_save(self, text=None, audio=None):
+    def analyze_and_save(self, audio_path=None):
         """
         Analyze emotions from text/audio and save the results
         
@@ -293,6 +296,11 @@ class Emotion:
         Returns:
             Dictionary with analysis results and save path
         """
-        results = self.detect_emotion(text=text, audio=audio)
+
+        transcript_path = get_transcript_path(self.timestamp)
+        text = read_transcript(transcript_path)
+        audio_path = get_audio_path(self.timestamp)
+
+        results = self.detect_emotion(text=text, audio=audio_path)
         
         self.save_data(results)
