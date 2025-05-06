@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from .helper import save_factor_data
+from .helper import save_factor_data, get_video_path, get_audio_path, get_transcript_path, read_transcript
 import re
 from pathlib import Path
 import os
@@ -148,13 +148,6 @@ class SpeechPatternAnalyzer:
         src_dir = project_root / 'src' / 'factors'
 
         return str(data_dir) + self.timestamp        
-
-    def read_transcript(self):
-        transcript_path = self.get_transcript_path()
-        file = open(transcript_path, 'r')
-        text = file.read()
-        file.close()
-        return text
 
     def main(self):
         text = self.read_transcript()

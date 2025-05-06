@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from pathlib import Path
-from .helper import save_factor_data
+from .helper import save_factor_data, get_video_path, get_audio_path, get_transcript_path
 
 class JointMap:
     """Analyzes body language using pose estimation and movement patterns."""
@@ -91,12 +91,3 @@ class JointMap:
             for coord, value in zip(['x', 'y', 'z'], coords)
         }
 
-    def get_video_path(self):
-        current_file = Path(__file__).resolve()
-
-        project_root = current_file.parents[2]
-
-        data_dir = project_root / 'data' / 'recordings' / 'video'
-        src_dir = project_root / 'src' / 'factors'
-
-        return str(data_dir) + self.timestamp        

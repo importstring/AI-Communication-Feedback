@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 import typing
 import os
+from .helper import save_factor_data, get_video_path, get_audio_path, get_transcript_path
 
 try:
     nltk.data.find('tokenizers/punkt')
@@ -152,13 +153,3 @@ class CoherenceAnalyzer:
         text = self.read_transcript()
         metrics = self.analyze_coherence(text)
         self.save_data(metrics)
-
-    def get_transcript_path(self):
-        current_file = Path(__file__).resolve()
-
-        project_root = current_file.parents[2]
-
-        data_dir = project_root / 'data' / 'recordings' / 'transcripts'
-        src_dir = project_root / 'src' / 'factors'
-
-        return str(data_dir) + self.timestamp        

@@ -185,6 +185,43 @@ def save_factor_data(data, factor_name: str, timestamp: str):
         sub_dir=str(sub_dir)
     )
 
+def get_video_path(self):
+    current_file = Path(__file__).resolve()
+
+    project_root = current_file.parents[2]
+
+    data_dir = project_root / 'data' / 'recordings' / 'video'
+    src_dir = project_root / 'src' / 'factors'
+
+    return str(data_dir) + self.timestamp        
+
+def get_transcript_path(self):
+    current_file = Path(__file__).resolve()
+
+    project_root = current_file.parents[2]
+
+    data_dir = project_root / 'data' / 'recordings' / 'transcripts'
+    src_dir = project_root / 'src' / 'factors'
+
+    return str(data_dir) + self.timestamp        
+
+def get_audio_path(self):
+    current_file = Path(__file__).resolve()
+
+    project_root = current_file.parents[2]
+
+    data_dir = project_root / 'data' / 'recordings' / 'audio'
+    src_dir = project_root / 'src' / 'factors'
+
+    return str(data_dir) + self.timestamp        
+
+def read_transcript(self):
+    transcript_path = self.get_transcript_path()
+    file = open(transcript_path, 'r')
+    text = file.read()
+    file.close()
+    return text
+
 if __name__ == "__main__":
     transcriber = AudioTranscriber("input.mp3", model_path="model")
     print("Transcribing...")
