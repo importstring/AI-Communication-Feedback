@@ -5,7 +5,6 @@ from .tonation import TonalAnalyzer
 from .volume import VolumeVarience
 from .coherence import CoherenceAnalyzer
 from .speech_patterns import SpeechPatternAnalyzer
-from .ethics import EthicsAnalyzer
 from .helper import save_factor_data
 
 __all__ = [
@@ -17,7 +16,6 @@ __all__ = [
     'VolumeVarience',
     'CoherenceAnalyzer',
     'SpeechPatternAnalyzer',
-    'EthicsAnalyzer',
     'save_factor_data'
 ]
  

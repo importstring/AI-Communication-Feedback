@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from pathlib import Path
-from ..parquet_management import ReadWrite
+from .helper import save_factor_data
 
 class JointMap:
     """Analyzes body language using pose estimation and movement patterns."""
@@ -80,7 +80,7 @@ class JointMap:
         ).T
         
         output_path = f"{datetime.now().strftime('%Y-%m-%d')}.parquet"
-        ReadWrite().write_parquet(data=df, file=output_path)
+        save_factor_data(df, 'body_language', output_path)
         return df
 
     def _flatten_landmarks(self, landmarks: dict) -> dict:
