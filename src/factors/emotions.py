@@ -282,7 +282,6 @@ class Emotion:
         Returns:
             Path to the saved file
         """
-        from .helper import save_factor_data
         save_factor_data(emotion_data, 'emotions', self.timestamp)
     
     def analyze_and_save(self, audio_path=None):
