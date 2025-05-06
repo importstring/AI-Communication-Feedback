@@ -138,17 +138,6 @@ class SpeechPatternAnalyzer:
         results = self.analyze_speech_patterns(text, audio, audio_duration, pauses)
         save_path = self.save_data(results)
         
-        
-    def get_transcript_path(self):
-        current_file = Path(__file__).resolve()
-
-        project_root = current_file.parents[2]
-
-        data_dir = project_root / 'data' / 'recordings' / 'transcripts'
-        src_dir = project_root / 'src' / 'factors'
-
-        return str(data_dir) + self.timestamp        
-
     def main(self):
         text = self.read_transcript()
         self.analyze_and_save(text)
