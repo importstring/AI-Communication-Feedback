@@ -21,6 +21,8 @@ class FactorAnalyzer:
         self.timestamp = timestamp
 
     def analyze(self):
-        # Saves Joints map into parquet file
-        # timestamp/body_langauge.pqrquet
         self.joint_map.map_recording('video.mp4') 
+
+    def analyze_and_save(self):
+        self.analyze()
+        self.save_factors()

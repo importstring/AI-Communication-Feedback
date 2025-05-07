@@ -11,6 +11,7 @@ from factors.main import run_factors
 from recording_tools import record
 
 from navigation import ask_multiple_choice
+from factors.main import FactorAnalyzer
 
 from datetime import datetime
 import os
@@ -20,10 +21,10 @@ import sys
 class Recording:
 	def __init__(self):
 		recording_dir = '/data/recordings/'
-		timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-		self.video_path = recording_dir + f'video/output_{timestamp}.mp4'
-		self.audio_path = recording_dir + f'audio/output_{timestamp}.wav'
-		self.transcript_path = recording_dir + f'transcript/output_{timestamp}.txt'
+		self.timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+		self.video_path = recording_dir + f'video/output_{self.timestamp}.mp4'
+		self.audio_path = recording_dir + f'audio/output_{self.timestamp}.wav'
+		self.transcript_path = recording_dir + f'transcript/output_{self.timestamp}.txt'
 
 	def save_transcript(self):
 		self.timestamp()
@@ -35,9 +36,10 @@ class Recording:
 		self.save_transcript()
 		
 def record_video():
-    recording = Recording()
-    recording.capture()
-    recording.save_transcript()
-    
-    return recording
+	recording = Recording()
+	recording.capture()
+	recording.save_transcript()
+	analyzer = FactorAnalyzer(recording.timestamp)
+	analyzer.analyze_and_save() 
+	return recording
 	
