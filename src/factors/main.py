@@ -12,18 +12,29 @@ from volume import VolumeVarience
 
 class FactorAnalyzer:
     def __init__(self, timestamp: str):
-        self.joint_map = JointMap()
-        self.coherence_analyzer = CoherenceAnalyzer()
-        self.emotion_analyzer = MultimodalEmotionAnalyzer()
-        self.speech_pattern_analyzer = SpeechPatternAnalyzer()
-        self.tonal_analyzer = TonalAnalyzer()
-        self.volume_varience = VolumeVarience()
+        self.joint_map = JointMap(timestamp)
+        self.coherence_analyzer = CoherenceAnalyzer(timestamp)
+        self.emotion_analyzer = Emotion(timestamp)
+        self.speech_pattern_analyzer = SpeechPatternAnalyzer(timestamp)
+        self.tonal_analyzer = TonalAnalyzer(timestamp)
+        self.volume_varience = VolumeVarience(timestamp)
         self.timestamp = timestamp
 
     def analyze(self):
-        self.joint_map.map_recording('video.mp4') 
-        
+        self.joint_map.XYZ()
+        self.coherence_analyzer.analyze_and_save()
+        self.emotion_analyzer.analyze_and_save()
+        self..XYZ()
+        self.XYZ.XYZ()
+        self.XYZ.XYZ()
+        self.XYZ.XYZ()
+        self.XYZ.XYZ()
+        self.XYZ.XYZ()
+        self.XYZ.XYZ()
+
+
 
     def analyze_and_save(self):
         self.analyze()
         self.save_factors()
+

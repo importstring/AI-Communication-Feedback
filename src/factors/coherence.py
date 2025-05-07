@@ -150,7 +150,7 @@ class CoherenceAnalyzer:
         file.close()
         return text
 
-    def analyze_and_save(self, text: str) -> dict:
+    def analyze_and_save(self):
         """Convenience method to analyze and save in one call."""
         text = self.read_transcript()
         metrics = self.analyze_coherence(text)
