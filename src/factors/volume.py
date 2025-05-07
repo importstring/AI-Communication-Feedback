@@ -35,7 +35,7 @@ class VolumeVarience:
 
             return rms_values
 
-    def save_data(self, data, audio_path):
+    def save_data(self, data):
         """
         Takes the input data and the path of the input file 
         Saves the data to a file in the ../data/measurements/{date recorded}/analysis.parquet
@@ -45,7 +45,7 @@ class VolumeVarience:
         df = pd.DataFrame({
             'timestamp': timestamps,
             'rms_value': data,
-            'audio_source': os.path.basename(audio_path)
+            'audio_source': os.path.basename(self.audio_path)
         })
         
         self.volume_variance = np.var(data)
@@ -53,17 +53,6 @@ class VolumeVarience:
         
         save_factor_data(df, 'volume', self.timestamp)
 
-    def calculate_and_save(self):
-        """
-        Calculate the variance of the RMS values and save the data.
-        
-        Returns:
-            Dictionary with analysis results and save path
-        """
-        path = self.get_path()
-        if not path:
-            return {'error': 'No audio file found'}
-            
-        data = self.calculate_rms(path)
-        
-        save_path = self.save_data(data, path)
+    def analyze_and_save(self):
+        data = self.calculate_rms(self.audio_path)
+        self.save_data(data)

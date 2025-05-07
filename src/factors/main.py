@@ -30,7 +30,7 @@ class FactorAnalyzer:
         self.speech_pattern_analyzer.analyze_and_save()
         self.speech_structure_analyzer.analyze_and_save()
         self.tonal_analyzer.analyze_and_save()
-        self.volume_varience.XYZ()
+        self.volume_varience.analyze_and_save()
         self.XYZ.XYZ()
         self.XYZ.XYZ()
         self.XYZ.XYZ()
