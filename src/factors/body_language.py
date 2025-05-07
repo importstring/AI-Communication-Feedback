@@ -22,26 +22,6 @@ class JointMap:
         self.timestamp = timestamp
         self.video_path = self.get_video_path()
 
-    def map_recording(self):
-        """Process video and store joint positions in parquet format."""
-        video_path = get_video_path()
-        cap = cv2.VideoCapture(video_path)
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        frame_count = 0
-
-        with self._create_landmarker() as landmarker:
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    break
-
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                self._process_frame(landmarker, rgb_frame, frame_count, fps)
-                frame_count += 1
-
-        cap.release()
-        self._save_results(video_path)
-
     def _create_landmarker(self):
         """Initialize pose landmarker with proper configuration"""
         options = self.PoseLandmarkerOptions(
@@ -89,3 +69,23 @@ class JointMap:
             for joint, coords in landmarks.items()
             for coord, value in zip(['x', 'y', 'z'], coords)
         }
+    
+    def analyze_and_save(self):
+        """Process video and store joint positions in parquet format."""
+        video_path = get_video_path()
+        cap = cv2.VideoCapture(video_path)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = 0
+
+        with self._create_landmarker() as landmarker:
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                self._process_frame(landmarker, rgb_frame, frame_count, fps)
+                frame_count += 1
+
+        cap.release()
+        self._save_results(video_path)
