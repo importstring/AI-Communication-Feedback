@@ -22,6 +22,7 @@ class FactorAnalyzer:
 
     def analyze(self):
         self.joint_map.map_recording('video.mp4') 
+        
 
     def analyze_and_save(self):
         self.analyze()
