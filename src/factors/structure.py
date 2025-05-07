@@ -9,6 +9,8 @@ from datetime import datetime
 import numpy as np
 from difflib import SequenceMatcher
 
+from .helper import save_factor_data
+
 # Download required NLTK data
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -316,7 +318,6 @@ class Structure:
         Returns:
             Path to the saved file
         """
-        from .helper import save_factor_data
         save_factor_data(data, 'structure', self.timestamp)
 
     def calculate_and_save(self):
@@ -325,5 +326,4 @@ class Structure:
         """
         message = self.get_message(self.get_path())
         data = self.analyze_structure(message)
-        # Save the data to a file
         self.save_data(data)
