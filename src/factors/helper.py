@@ -222,6 +222,43 @@ def read_transcript(self):
     file.close()
     return text
 
+
+def get_most_recent_path(self):
+    """
+    Get the path to the most recent audio file.
+    
+    When recorded here are the file names:
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+        video_filename = f'output_{timestamp}.mp4'
+        audio_filename = f'output_{timestamp}.wav'
+
+        base_dir = '../data/recordings'
+
+        video_filename = base_dir + '/video/' video_filename
+        audio_filename = base_dir + '/audio/' audio_filename
+    
+    Return the most recent .wav file
+    """
+    try:
+        files = glob.glob(os.path.join(self.base_audio_path, 'output_*.wav'))
+        if not files:
+            raise FileNotFoundError(f"No WAV files found in {self.base_audio_path}")
+        
+        file_times = []
+        for f in files:
+            timestamp_str = os.path.basename(f).split('_')[1].split('.')[0]
+            file_time = datetime.strptime(timestamp_str, '%Y-%m-%d_%H-%M-%S')
+            file_times.append((f, file_time))
+        
+        latest = max(file_times, key=lambda x: x[1])
+        return latest[0]
+    
+    except Exception as e:
+        print(f"Error finding audio file: {str(e)}")
+        return None
+    
+
 if __name__ == "__main__":
     transcriber = AudioTranscriber("input.mp3", model_path="model")
     print("Transcribing...")
