@@ -19,7 +19,7 @@ transformers==4.30.2
 nltk==3.8.1
 pyAudioAnalysis==0.3.14
 opensmile==2.4.2
-torch==2.2.1
+torch==2.7.0
 torchvision==0.17.1
 torchaudio==2.2.1
 tokenizers==0.13.3
