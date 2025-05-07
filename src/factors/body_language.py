@@ -22,8 +22,9 @@ class JointMap:
         self.timestamp = timestamp
         self.video_path = self.get_video_path()
 
-    def map_recording(self, video_path: str) -> pd.DataFrame:
+    def map_recording(self):
         """Process video and store joint positions in parquet format."""
+        video_path = get_video_path()
         cap = cv2.VideoCapture(video_path)
         fps = cap.get(cv2.CAP_PROP_FPS)
         frame_count = 0
@@ -74,7 +75,6 @@ class JointMap:
 
     def _save_results(self):
         """Convert results to DataFrame and save as parquet"""
-        video_path = get_video_path()
         df = pd.DataFrame(
             {frame: self._flatten_landmarks(data) 
              for frame, data in self.states.items()}
