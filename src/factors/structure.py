@@ -320,7 +320,7 @@ class Structure:
         """
         save_factor_data(data, 'structure', self.timestamp)
 
-    def calculate_and_save(self):
+    def analyze_and_save(self):
         """
         Calculate the structure score and save the data
         """
