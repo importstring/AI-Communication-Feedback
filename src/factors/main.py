@@ -28,7 +28,7 @@ class FactorAnalyzer:
         self.emotion_analyzer.analyze_and_save()
         self.speech_pattern_analyzer.analyze_and_save()
         self.speech_structure_analyzer.analyze_and_save()
-        self.XYZ.XYZ()
+        self.tonal_analyzer.()
         self.XYZ.XYZ()
         self.XYZ.XYZ()
         self.XYZ.XYZ()

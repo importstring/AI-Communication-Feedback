@@ -14,7 +14,7 @@ class TonalAnalyzer:
     for temporal alignment with video analysis pipelines.
     """
     
-    def __init__(self, sr=16000, frame_length=2048, hop_length=512, timestamp: str = None):
+    def __init__(self, timestamp, sr=16000, frame_length=2048, hop_length=512):
         """Initialize audio processing parameters.
         
         Args:
