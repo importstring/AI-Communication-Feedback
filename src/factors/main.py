@@ -24,7 +24,7 @@ class FactorAnalyzer:
         self.joint_map.XYZ()
         self.coherence_analyzer.analyze_and_save()
         self.emotion_analyzer.analyze_and_save()
-        self..XYZ()
+        self.speech_pattern_analyzer.analyze_and_save()
         self.XYZ.XYZ()
         self.XYZ.XYZ()
         self.XYZ.XYZ()

@@ -111,19 +111,7 @@ class SpeechPatternAnalyzer:
                 items.append((new_key, v))
         return dict(items)
     
-    def analyze_and_save(self, text, audio=None, audio_duration=None, pauses=None):
-        """
-        Analyze speech patterns and save results.
-        
-        Args:
-            text: Text to analyze
-            audio: Optional audio data
-            audio_duration: Length of audio in seconds
-            pauses: List of pause durations
-            
-        Returns:
-            Dictionary with speech pattern metrics
-        """
+    def analyze_and_save(self):
         text = self.read_transcript()
         results = self.analyze_speech_patterns(text)
         self.save_data(results)
