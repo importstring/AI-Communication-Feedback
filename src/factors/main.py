@@ -20,6 +20,7 @@ class FactorAnalyzer:
         self.speech_structure_analyzer = Structure(timestamp)
         self.tonal_analyzer = TonalAnalyzer(timestamp)
         self.volume_varience = VolumeVarience(timestamp)
+        
         self.timestamp = timestamp
 
     def analyze(self):
@@ -28,7 +29,7 @@ class FactorAnalyzer:
         self.emotion_analyzer.analyze_and_save()
         self.speech_pattern_analyzer.analyze_and_save()
         self.speech_structure_analyzer.analyze_and_save()
-        self.tonal_analyzer.()
+        self.tonal_analyzer.analyze_and_save()
         self.XYZ.XYZ()
         self.XYZ.XYZ()
         self.XYZ.XYZ()
