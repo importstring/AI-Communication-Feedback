@@ -3,15 +3,14 @@ import numpy as np
 import os
 import glob
 from datetime import datetime
-from .helper import save_factor_data
+from .helper import save_factor_data, get_video_path, get_audio_path, get_transcript_path
 import pandas as pd
 
 class VolumeVarience:
     def __init__(self, timestamp: str = None):
         self.volume = None
         self.volume_variance = None
-        self.base_audio_path = '../data/recording/audio/'
-        self.filename = self.get_path()
+        self.audio_path = get_audio_path(timestamp)
         self.timestamp = timestamp     
         
     def calculate_rms(self, audio_path: str, interval: float = 0.25) -> float:
@@ -35,28 +34,6 @@ class VolumeVarience:
                 rms_values.append(rms)
 
             return rms_values
-
-    def calculate_and_save(self) -> dict:
-        """
-        Calculate the variance of the RMS values and save the data.
-        
-        Returns:
-            Dictionary with analysis results and save path
-        """
-        path = self.get_path()
-        if not path:
-            return {'error': 'No audio file found'}
-            
-        data = self.calculate_rms(path)
-        
-        save_path = self.save_data(data, path)
-        
-        return {
-            'rms_values': data,
-            'volume_variance': self.volume_variance,
-            'audio_path': path,
-            'save_path': save_path
-        }
 
     def save_data(self, data, audio_path):
         """
@@ -110,3 +87,18 @@ class VolumeVarience:
         except Exception as e:
             print(f"Error finding audio file: {str(e)}")
             return None
+        
+    def calculate_and_save(self):
+        """
+        Calculate the variance of the RMS values and save the data.
+        
+        Returns:
+            Dictionary with analysis results and save path
+        """
+        path = self.get_path()
+        if not path:
+            return {'error': 'No audio file found'}
+            
+        data = self.calculate_rms(path)
+        
+        save_path = self.save_data(data, path)
