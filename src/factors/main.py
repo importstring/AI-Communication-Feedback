@@ -24,16 +24,13 @@ class FactorAnalyzer:
         self.timestamp = timestamp
 
     def analyze(self):
-        self.joint_map.XYZ()
+        self.joint_map.analyze_and_save()
         self.coherence_analyzer.analyze_and_save()
         self.emotion_analyzer.analyze_and_save()
         self.speech_pattern_analyzer.analyze_and_save()
         self.speech_structure_analyzer.analyze_and_save()
         self.tonal_analyzer.analyze_and_save()
         self.volume_varience.analyze_and_save()
-        self.XYZ.XYZ()
-        self.XYZ.XYZ()
-        self.XYZ.XYZ()
 
 
 
