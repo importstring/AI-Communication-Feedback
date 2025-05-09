@@ -1,9 +1,10 @@
 import sys
 import os
-from utils import ask_multiple_choice
-from src.analysis import analyze_video
+from src.navigation import multiple_choice
+# from src.factors.main import Factors
+# from src.analysis import analyze_video
 from datetime import datetime
-from src.data_extraction import record_video
+from src.recording_tools import record as record_video
 
 def main():
 	while True:
@@ -11,11 +12,14 @@ def main():
 			'Record video', 'Analyze video', 'Exit'
 		]
 
-		command = ask_multiple_choice(choices) 
+		command = multiple_choice(choices) 
 	
 		if command == 'Record video':
-			recording = record_video()
-			
+			timestamp = record_video()
+		#	factors = Factors()
+		#	factors.extract_factors(timestamp)
+		#	factors.save_factors() # TODO: PLACEHOLDER
+	
 		elif command == 'Analyze video':
 			pass
 		else:

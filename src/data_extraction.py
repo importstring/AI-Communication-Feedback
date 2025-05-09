@@ -1,5 +1,5 @@
-from factors.body_language import JointMap
-from factors.emotions import Emotion, MultimodalEmotionAnalyzer
+from .factors.body_language import JointMap
+from .factors.emotions import Emotion, MultimodalEmotionAnalyzer
 from factors.helper import AudioTranscriber
 from factors.structure import Structure
 from factors.tonation import TonalAnalyzer
