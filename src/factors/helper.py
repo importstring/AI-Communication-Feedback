@@ -185,35 +185,32 @@ def save_factor_data(data, factor_name: str, timestamp: str):
         sub_dir=str(sub_dir)
     )
 
-def get_video_path(self):
+def get_video_path(timestamp):
     current_file = Path(__file__).resolve()
 
     project_root = current_file.parents[2]
 
     data_dir = project_root / 'data' / 'recordings' / 'video'
-    src_dir = project_root / 'src' / 'factors'
 
-    return str(data_dir) + self.timestamp        
+    return str(data_dir) + timestamp        
 
-def get_transcript_path(self):
+def get_transcript_path(timestamp):
     current_file = Path(__file__).resolve()
 
     project_root = current_file.parents[2]
 
     data_dir = project_root / 'data' / 'recordings' / 'transcripts'
-    src_dir = project_root / 'src' / 'factors'
 
-    return str(data_dir) + self.timestamp        
+    return str(data_dir) + timestamp        
 
-def get_audio_path(self):
+def get_audio_path(timestamp):
     current_file = Path(__file__).resolve()
 
     project_root = current_file.parents[2]
 
     data_dir = project_root / 'data' / 'recordings' / 'audio'
-    src_dir = project_root / 'src' / 'factors'
 
-    return str(data_dir) + self.timestamp        
+    return str(data_dir) + timestamp        
 
 def read_transcript(self):
     transcript_path = self.get_transcript_path()
