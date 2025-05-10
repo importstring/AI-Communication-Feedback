@@ -5,7 +5,7 @@ import numpy as np
 
 from body_language import JointMap
 from coherence import CoherenceAnalyzer
-from emotions import MultimodalEmotionAnalyzer, Emotion
+from emotions import Emotion
 from speech_patterns import SpeechPatternAnalyzer
 from tonation import TonalAnalyzer
 from volume import VolumeVarience
@@ -23,7 +23,7 @@ class FactorAnalyzer:
         
         self.timestamp = timestamp
 
-    def analyze(self):
+    def extract_facotrs(self):
         self.joint_map.analyze_and_save()
         self.coherence_analyzer.analyze_and_save()
         self.emotion_analyzer.analyze_and_save()
@@ -31,10 +31,3 @@ class FactorAnalyzer:
         self.speech_structure_analyzer.analyze_and_save()
         self.tonal_analyzer.analyze_and_save()
         self.volume_varience.analyze_and_save()
-
-
-
-    def analyze_and_save(self):
-        self.analyze()
-        self.save_factors()
-
