@@ -1,25 +1,15 @@
-# Core web framework
-fastapi==0.115.12
-uvicorn==0.30.1
-gunicorn==21.2.0
-python-multipart==0.0.9
-
-# AI/ML stack
-torch==2.7.0
-tensorflow==2.15.0
-transformers==4.30.2
-tokenizers<0.14  # <-- Fix: Make this compatible
-
-# Audio processing
-librosa==0.11.0
-pydub==0.25.1
-SpeechRecognition==3.14.2
-crepe==0.0.16
-
-# Utilities
-python-dotenv==1.1.0
-psutil==5.9.8
-rich==13.7.1
-
-# Other (To lazy to name)
-opencv-python==4.11.0.86
+opencv-python
+dtw-python
+mediapipe
+pandas
+numpy
+nltk
+transformers
+torch
+torchaudio
+librosa
+disvoice
+pyaudio
+vosk
+pydub
+pyarrow
