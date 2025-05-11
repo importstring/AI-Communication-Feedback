@@ -1,151 +1,198 @@
+## Updated AI Model with Factor Integration ##
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
 import pandas as pd
-import cv2
-import librosa
-from transformers import AutoModel, AutoTokenizer
-from sklearn.preprocessing import StandardScaler
+import numpy as np
+import glob
+import os
 from torch.utils.data import Dataset, DataLoader
+from sklearn.preprocessing import StandardScaler
 from scipy.stats import pearsonr
 
-class TemporalGRU(nn.Module):
-    """Bidirectional GRU for temporal modeling"""
-    def __init__(self, input_size=512, hidden_size=512, bidirectional=True):
-        super().__init__()
-        self.gru = nn.GRU(input_size=input_size, 
-                         hidden_size=hidden_size,
-                         bidirectional=bidirectional,
-                         batch_first=True)
-
-    def forward(self, x):
-        output, _ = self.gru(x)
-        return output
-
-class MultiHeadAttention(nn.Module):
-    """Replacement for CrossModelAttention"""
-    def __init__(self, embed_dim, num_heads):
-        super().__init__()
-        self.attention = nn.MultiheadAttention(embed_dim, num_heads)
-        
-    def forward(self, visual, audio):
-        combined = torch.cat((visual.unsqueeze(1), audio.unsqueeze(1)), dim=1)
-        attn_output, _ = self.attention(combined, combined, combined)
-        return attn_output.mean(dim=1)
+# Configuration matching your project structure
+CONFIG = {
+    "raw_data_dir": "/Users/simon/AI-Presentation-Feedback/data/recordings",
+    "expert_scores_path": "/Users/simon/AI-Presentation-Feedback/data/expert_scores.csv",
+    "output_dir": "results/",
+    "modality_mapping": {
+        'visual': ['body_language', 'emotion'],
+        'audio': ['speech_patterns', 'tonal', 'volume'],
+        'text': ['coherence', 'structure']
+    }
+}
 
 class EnhancedFusion(nn.Module):
-    def __init__(self, visual_dim=2048, audio_dim=768, text_dim=768, hidden_dim=512):
+    """Updated to handle actual factor dimensions"""
+    def __init__(self, input_dims):
         super().__init__()
-        self.visual_proj = nn.Linear(visual_dim, hidden_dim)
-        self.audio_proj = nn.Linear(audio_dim, hidden_dim)
-        self.text_proj = nn.Linear(text_dim, hidden_dim)
-
-        self.attention = MultiHeadAttention(hidden_dim, 4)
-        self.temporal_gru = TemporalGRU(input_size=hidden_dim, hidden_size=256)
+        self.visual_dim = input_dims['visual']
+        self.audio_dim = input_dims['audio']
+        self.text_dim = input_dims['text']
         
-        self.classifier = nn.Sequential(
-            nn.Linear(256*2, 256),
-            nn.ReLU(),
+        # Modality-specific projections
+        self.visual_proj = nn.Linear(self.visual_dim, 512)
+        self.audio_proj = nn.Linear(self.audio_dim, 512)
+        self.text_proj = nn.Linear(self.text_dim, 512)
+        
+        # Temporal modeling (assuming 5-second clips at 30fps)
+        self.temporal_gru = nn.GRU(input_size=512, hidden_size=256, 
+                                 bidirectional=True, batch_first=True)
+        
+        # Multi-modal attention
+        self.cross_attn = nn.MultiheadAttention(embed_dim=512, num_heads=4)
+        
+        # Final regression layer
+        self.regressor = nn.Sequential(
+            nn.Linear(512*3, 256),
             nn.LayerNorm(256),
+            nn.ReLU(),
             nn.Linear(256, 1)
         )
 
     def forward(self, x):
-        visual = self.visual_proj(x[:, :2048])
-        audio = self.audio_proj(x[:, 2048:2048+768])
-        text = self.text_proj(x[:, 2048+768:])
-
-        attended = self.attention(visual, audio)
-        combined = torch.stack([attended, text], dim=1)
-        temporal_out = self.temporal_gru(combined)
-        pooled = temporal_out.mean(dim=1)
-        return self.classifier(pooled)
-
-class CustomDataset(Dataset):
-    def __init__(self, raw_data, expert_scores):
-        self.features = []
-        self.labels = []
+        # Split into modalities
+        visual = x[:, :self.visual_dim]
+        audio = x[:, self.visual_dim:self.visual_dim+self.audio_dim]
+        text = x[:, self.visual_dim+self.audio_dim:]
         
-        for data in raw_data:
-            visual = self.process_video(data['video'])
-            audio = self.process_audio(data['audio'])
-            text = self.process_text(data['text'])
-            aligned = self.temporal_alignment(visual, audio, text)
-            self.features.append(aligned)
-            
-        self.labels = expert_scores
+        # Project modalities
+        v_proj = self.visual_proj(visual)
+        a_proj = self.audio_proj(audio)
+        t_proj = self.text_proj(text)
+        
+        # Temporal modeling
+        v_temp, _ = self.temporal_gru(v_proj.unsqueeze(1))
+        a_temp, _ = self.temporal_gru(a_proj.unsqueeze(1))
+        
+        # Cross-modal attention
+        attn_out, _ = self.cross_attn(
+            torch.cat([v_temp, a_temp], dim=1).transpose(0,1),
+            t_proj.unsqueeze(1).transpose(0,1),
+            t_proj.unsqueeze(1).transpose(0,1)
+        )
+        
+        # Combine features
+        combined = torch.cat([
+            v_temp.mean(dim=1),
+            a_temp.mean(dim=1),
+            attn_out.squeeze().mean(dim=1)
+        ], dim=1)
+        
+        return self.regressor(combined)
+
+class FactorDataset(Dataset):
+    """Handles timestamp-based factor loading"""
+    def __init__(self, config):
+        self.config = config
+        self.timestamps = self._get_valid_timestamps()
+        self.scaler = StandardScaler()
+        self.feature_dim = self._calculate_feature_dim()
+        self._preload_data()
+
+    def _get_valid_timestamps(self):
+        score_df = pd.read_csv(self.config['expert_scores_path'])
+        valid_ts = []
+        
+        for ts in score_df['timestamp']:
+            ts_path = os.path.join(self.config['raw_data_dir'], ts)
+            if os.path.exists(ts_path):
+                valid_ts.append(ts)
+        
+        return valid_ts
+
+    def _calculate_feature_dim(self):
+        sample_ts = self.timestamps[0]
+        sample_features = self._load_timestamp_features(sample_ts)
+        return sum(len(v) for v in sample_features.values())
+
+    def _load_timestamp_features(self, timestamp):
+        features = {'visual': [], 'audio': [], 'text': []}
+        ts_dir = os.path.join(self.config['raw_data_dir'], timestamp)
+        
+        for modality, factors in self.config['modality_mapping'].items():
+            for factor in factors:
+                factor_path = os.path.join(ts_dir, f"{factor}.parquet")
+                if os.path.exists(factor_path):
+                    df = pd.read_parquet(factor_path)
+                    features[modality].extend(df.values.flatten())
+        
+        return features
+
+    def _preload_data(self):
+        self.data = []
+        self.scores = pd.read_csv(self.config['expert_scores_path'])
+        
+        # First pass to fit scaler
+        all_features = []
+        for ts in self.timestamps:
+            features = self._load_timestamp_features(ts)
+            combined = np.concatenate([features['visual'], features['audio'], features['text']])
+            all_features.append(combined)
+        
+        self.scaler.fit(np.vstack(all_features))
 
     def __len__(self):
-        return len(self.features)
+        return len(self.timestamps)
 
     def __getitem__(self, idx):
-        return torch.tensor(self.features[idx]), torch.tensor(self.labels[idx])
-
-    def process_video(self, video_path):
-        # Implement video processing
-        pass
-    
-    def process_audio(self, audio_path):
-        # Implement audio processing
-        pass
-    
-    def process_text(self, text_path):
-        # Implement text processing
-        pass
-    
-    def temporal_alignment(self, visual, audio, text):
-        # Implement alignment
-        pass
+        ts = self.timestamps[idx]
+        features = self._load_timestamp_features(ts)
+        combined = np.concatenate([features['visual'], features['audio'], features['text']])
+        scaled = self.scaler.transform(combined.reshape(1, -1))
+        
+        score = self.scores[self.scores['timestamp'] == ts]['score'].values[0]
+        return torch.FloatTensor(scaled).squeeze(), torch.FloatTensor([score])
 
 def main():
-    # Configuration
-    config = {
-        "raw_data_dir": "/Users/simon/AI-Presentation-Feedback/data",
-        "expert_scores_path": "",
-        "output_dir": "results/"
+    # Initialize dataset
+    dataset = FactorDataset(CONFIG)
+    
+    # Calculate input dimensions for model initialization
+    input_dims = {
+        'visual': len(dataset._load_timestamp_features(dataset.timestamps[0])['visual']),
+        'audio': len(dataset._load_timestamp_features(dataset.timestamps[0])['audio']),
+        'text': len(dataset._load_timestamp_features(dataset.timestamps[0])['text'])
     }
     
-    # Load data
-    raw_data = [...]  # Load your raw data files
-    expert_scores = pd.read_csv(config['expert_scores_path']).values
-    
-    # Create datasets
-    dataset = CustomDataset(raw_data, expert_scores)
-    train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
-    
-    # Initialize model
+    # Model setup
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = EnhancedFusion().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    criterion = nn.MSELoss()
+    model = EnhancedFusion(input_dims).to(device)
+    
+    # Training setup
+    train_loader = DataLoader(dataset, batch_size=16, shuffle=True)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5, weight_decay=0.01)
+    criterion = nn.HuberLoss()
     
     # Training loop
-    for epoch in range(10):
-        for features, labels in train_loader:
-            features = features.to(device).float()
-            labels = labels.to(device).float()
-            
-            outputs = model(features)
-            loss = criterion(outputs, labels)
+    for epoch in range(15):
+        model.train()
+        epoch_loss = 0
+        
+        for features, targets in train_loader:
+            features = features.to(device)
+            targets = targets.to(device)
             
             optimizer.zero_grad()
+            outputs = model(features)
+            loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
-    
-    # Evaluation
-    with torch.no_grad():
-        features, labels = next(iter(train_loader))
-        predictions = model(features.to(device).float())
-        correlation = pearsonr(predictions.cpu().numpy(), labels.numpy())[0]
-        print(f"Expert Correlation: {correlation:.2f}")
+            
+            epoch_loss += loss.item()
         
-    # Generate report
-    report = pd.DataFrame({
-        "Expert": labels.numpy().flatten(),
-        "Model": predictions.cpu().numpy().flatten()
-    })
-    report.to_csv(f"{config['output_dir']}/comparison.csv", index=False)
+        # Validation
+        model.eval()
+        with torch.no_grad():
+            val_features, val_targets = next(iter(DataLoader(dataset, batch_size=len(dataset))))
+            predictions = model(val_features.to(device))
+            correlation = pearsonr(predictions.cpu().numpy().flatten(), 
+                                 val_targets.numpy().flatten())[0]
+            
+        print(f"Epoch {epoch+1} | Loss: {epoch_loss/len(train_loader):.4f} | "
+              f"Val Correlation: {correlation:.2f}")
+    
+    # Save final model
+    torch.save(model.state_dict(), os.path.join(CONFIG['output_dir'], 'presentation_feedback_model.pth'))
 
 if __name__ == "__main__":
     main()

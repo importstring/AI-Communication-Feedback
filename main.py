@@ -6,6 +6,7 @@ from src.factors.main import Factors
 from src.analysis import analyze_video
 from datetime import datetime
 from src.recording_tools import record as record_video
+from src.video_analysis.main import analyze_video
 
 def main():
 	print('got here')
@@ -23,7 +24,7 @@ def main():
 			factors = Factors(timestamp)
 			factors.extract_factors(timestamp)
 		elif command == 'Analyze video':
-			pass
+			analyze_video(timestamp) # In future allow user to pick timestamp
 		else:
 			sys.exit(0)
 

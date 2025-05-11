@@ -13,3 +13,11 @@ pyaudio
 vosk
 pydub
 pyarrow
+yt-dlp 
+textual 
+rich
+aiohttp
+beautifulsoup4 
+selenium 
+requests
+undetected-chromedriver
