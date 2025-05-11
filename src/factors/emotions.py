@@ -7,7 +7,7 @@ from transformers import Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtra
 import torch.nn as nn
 from typing import Dict, Optional, Union
 import numpy as np
-from helper import get_audio_path, get_transcript_path, get_video_path, save_factor_data, read_transcript
+from .helper import get_audio_path, get_transcript_path, get_video_path, save_factor_data, read_transcript
 
 class MultimodalEmotionAnalyzer:
     def __init__(self, text_weight=0.7, timestamp=None):

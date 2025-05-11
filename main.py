@@ -8,11 +8,12 @@ from datetime import datetime
 from src.recording_tools import record as record_video
 
 def main():
+	print('got here')
 	while True:
 		choices = [
 			'Record video', 'Analyze video', 'Exit'
 		]
-
+		print('Select an option:')
 		command = multiple_choice(choices) 
 		print('You selected:', command)
 		time.sleep(10)
@@ -25,6 +26,8 @@ def main():
 			pass
 		else:
 			sys.exit(0)
-			
+
+main()
+
 if __name__ == "__main__":
 	main()
