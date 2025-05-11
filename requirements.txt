@@ -21,3 +21,4 @@ beautifulsoup4
 selenium 
 requests
 undetected-chromedriver
+youtube_search

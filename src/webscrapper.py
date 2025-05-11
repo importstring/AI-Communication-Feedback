@@ -2,10 +2,14 @@ import time
 import re
 import asyncio
 import yt_dlp
-from selenium import webdriver
+from bs4 import BeautifulSoup
+import requests
+import random
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import undetected_chromedriver as uc
+from youtube_search import YoutubeSearch
 
 class CommunicatorScraper:
     def __init__(self, run_duration_seconds=3600):
@@ -18,111 +22,122 @@ class CommunicatorScraper:
         self.video_count = 0
         self.run_duration = run_duration_seconds
 
-        # Setup undetected ChromeDriver with options
+        # Configure stealth browser
         options = uc.ChromeOptions()
         options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_argument("--start-maximized")
-        # Add proxy or user-agent rotation here if available
-        self.driver = uc.Chrome(options=options)
+        options.add_argument(f"user-agent={self._random_user_agent()}")
+        self.driver = uc.Chrome(options=options, headless=False)
 
-    def extract_names(self, soup):
-        names = []
-        headers = soup.find_all(['h2', 'h3', 'h4'])
-        for header in headers:
-            text = header.get_text().strip()
-            if re.match(r'^[A-Z][a-z]+ [A-Z][a-z]+', text):
-                names.append(text.split('(')[0].strip())
-        return names
+    def _random_user_agent(self):
+        agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
+        ]
+        return random.choice(agents)
 
-    def scrape_base_sources(self):
-        import requests
-        from bs4 import BeautifulSoup
+    def _extract_communicators(self, soup):
+        patterns = [
+            r'\b[A-Z][a-z]+ [A-Z][a-z]+\b',  # First Last
+            r'\b(?:Dr|Mr|Mrs|Ms)\.?\s+[A-Z][a-z]+ [A-Z][a-z]+\b'  # Titles
+        ]
+        return list(set(re.findall('|'.join(patterns), soup.get_text())))
 
-        communicators = []
-        for url in self.base_sources:
-            print(f"Fetching base source: {url}")
-            try:
-                response = requests.get(url, timeout=10)
-                soup = BeautifulSoup(response.text, 'html.parser')
-                names = self.extract_names(soup)
-                print(f"Found {len(names)} communicators in base source.")
-                communicators.extend(names)
-            except Exception as e:
-                print(f"Error fetching {url}: {e}")
-        return list(set(communicators))
+    def _scrape_website(self, url):
+        try:
+            response = requests.get(url, timeout=10, headers={'User-Agent': self._random_user_agent()})
+            soup = BeautifulSoup(response.text, 'html.parser')
+            return self._extract_communicators(soup)
+        except Exception as e:
+            print(f"Error scraping {url}: {str(e)}")
+            return []
 
-    def google_search_new_sources(self):
-        print("Searching Google for additional sources...")
+    def _google_search_sources(self):
+        print("Searching Google for expert communicators...")
         self.driver.get("https://www.google.com")
         search_box = self.driver.find_element(By.NAME, "q")
-        search_query = "top communicators 2025 best public speakers"
-        search_box.send_keys(search_query)
+        search_box.send_keys("top communicators 2025 best public speakers")
         search_box.submit()
-        time.sleep(3)
 
-        new_sources = []
-        results = self.driver.find_elements(By.CSS_SELECTOR, "div.g")
-        for result in results[:5]:
+        # Wait for results and click through to actual pages
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div.g"))
+        )
+
+        results = self.driver.find_elements(By.CSS_SELECTOR, "div.g a")[:5]
+        for result in results:
             try:
-                link = result.find_element(By.TAG_NAME, "a").get_attribute("href")
-                if link.startswith("http"):
-                    print(f"Found new source: {link}")
-                    new_sources.append(link)
-            except Exception:
-                continue
-        self.base_sources.extend(new_sources)
+                url = result.get_attribute("href")
+                if url and "google.com" not in url:
+                    print(f"Visiting source: {url}")
+                    self.driver.execute_script("window.open('');")
+                    self.driver.switch_to.window(self.driver.window_handles[1])
+                    self.driver.get(url)
+                    
+                    # Extract names from actual page content
+                    page_communicators = self._extract_communicators(
+                        BeautifulSoup(self.driver.page_source, 'html.parser')
+                    )
+                    self.base_sources.extend(page_communicators)
+                    
+                    self.driver.close()
+                    self.driver.switch_to.window(self.driver.window_handles[0])
+                    time.sleep(random.uniform(2, 5))
+            except Exception as e:
+                print(f"Error processing result: {str(e)}")
 
-    def youtube_search(self, query):
-        print(f"Searching YouTube for: {query}")
-        self.driver.get(f"https://www.youtube.com/results?search_query={query}")
-        time.sleep(3)
-        videos = self.driver.find_elements(By.CSS_SELECTOR, "ytd-video-renderer")
-        links = []
-        for v in videos[:3]:
-            try:
-                href = v.find_element(By.TAG_NAME, "a").get_attribute("href")
-                if "youtube.com/watch" in href:
-                    print(f"Found video link: {href}")
-                    links.append(href)
-            except Exception:
-                continue
-        return links
+    def _youtube_search(self, query):
+        try:
+            results = YoutubeSearch(query, max_results=10).to_dict()
+            return [f"https://youtube.com/watch?v={res['id']}" for res in results]
+        except Exception as e:
+            print(f"YouTube search failed: {str(e)}")
+            return []
 
-    def download_video(self, url):
-        print(f"Downloading video: {url}")
+    def _download_video(self, url):
         ydl_opts = {
             'format': 'bestvideo+bestaudio/best',
-            'outtmpl': 'videos/%(title)s.%(ext)s',
+            'outtmpl': f'videos/%(uploader)s/%(title)s.%(ext)s',
+            'retries': 3,
             'merge_output_format': 'mp4',
-            'quiet': True,
-            'no_warnings': True,
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
-            print("Download successful.")
             self.video_count += 1
         except Exception as e:
-            print(f"Download failed: {e}")
+            print(f"Download failed: {str(e)}")
 
     async def run(self):
         start_time = time.time()
         while time.time() - start_time < self.run_duration:
-            communicators = self.scrape_base_sources()
-            self.google_search_new_sources()
-            for communicator in communicators:
-                if communicator not in self.processed_communicators:
-                    print(f"Processing communicator: {communicator}")
-                    video_links = self.youtube_search(communicator + " speech")
-                    for link in video_links:
-                        self.download_video(link)
-                    self.processed_communicators.add(communicator)
-                    print(f"Total videos downloaded so far: {self.video_count}")
-            print("Sleeping for 10 minutes before next iteration...")
-            await asyncio.sleep(600)  # Wait 10 minutes between iterations
-        print(f"Run complete. Total videos downloaded: {self.video_count}")
+            # Scrape base sources
+            communicators = []
+            for url in self.base_sources:
+                if url.startswith("http"):
+                    communicators.extend(self._scrape_website(url))
+            
+            # Find new sources via Google
+            self._google_search_sources()
+            
+            # Process communicators
+            for name in set(communicators):
+                if name not in self.processed_communicators:
+                    print(f"Processing: {name}")
+                    for video_url in self._youtube_search(f"{name} speech"):
+                        self._download_video(video_url)
+                    self.processed_communicators.add(name)
+                    print(f"Total videos: {self.video_count}")
+                    
+                    # Random delay between requests
+                    await asyncio.sleep(random.uniform(1, 3))
+            
+            # Random longer delay between iterations
+            await asyncio.sleep(random.uniform(30, 60))
+        
         self.driver.quit()
+        print(f"Completed. Total videos downloaded: {self.video_count}")
 
 if __name__ == "__main__":
-    scraper = CommunicatorScraper(run_duration_seconds=3600)  # Run for 1 hour
+    scraper = CommunicatorScraper(run_duration_seconds=3600)
     asyncio.run(scraper.run())
